@@ -50,7 +50,7 @@
         .stat-card { background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 16px; border: 2px solid white; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
         .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 8000; display: flex; items-center: center; justify-content: center; padding: 20px; pointer-events: auto; }
-        #reward-modal.modal-mask { z-index: 9000 !important; }
+        #reward-modal.modal-mask { z-index: 9500 !important; }
         #delete-mission-modal.modal-mask { z-index: 9500 !important; }
         
         .modal-body { background: white; width: 95%; max-width: 750px; border-radius: 40px; position: relative; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; border-top: 16px solid #3b82f6; }
@@ -229,6 +229,17 @@
                             <input type="checkbox" class="w-6 h-6 rounded text-blue-600" onchange="window.state.autoRead = this.checked; window.saveProgress()" id="set-auto-read">
                             題目自動語音報讀
                         </label>
+                        <!-- 新增：語音選擇與語速調整 -->
+                        <div class="flex flex-col gap-2">
+                             <label class="font-bold text-slate-600">🗣️ 選擇語音 (Voice)</label>
+                             <select id="voice-select" class="p-3 rounded-xl border-2 border-slate-300 bg-white font-bold text-slate-700" onchange="window.updateVoiceSettings()">
+                                 <!-- JS Populated -->
+                             </select>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="font-bold text-slate-600">⏩ 語音速度 (Speed): <span id="rate-value">1.0</span>x</label>
+                            <input type="range" id="voice-rate" min="0.5" max="2" step="0.1" value="1" class="w-full" oninput="window.updateVoiceSettings()">
+                        </div>
                     </div>
 
                     <!-- 介面設定 -->
@@ -286,7 +297,7 @@
             <div class="battle-card text-slate-800">
                 <div class="text-6xl mb-4">👾</div>
                 <h2 class="text-3xl font-black text-red-500 mb-2 italic text-center">遭遇強敵！</h2>
-                <p class="text-gray-300 mb-8 font-bold text-center">前方發現暴怒守衛，是否進行戰鬥？</p>
+                <p class="text-gray-300 mb-8 font-bold text-center">前方發現暴怒守衛，是否進行戰鬥？<br><span class="text-sm text-yellow-300">(挑戰難度：高)</span></p>
                 <div class="flex gap-4">
                     <button onclick="window.closeBattleConfirm()" class="flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white">逃跑</button>
                     <button onclick="window.startBattle()" class="flex-1 py-3 bg-red-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none text-slate-800">戰鬥！</button>
@@ -526,8 +537,42 @@
                     });
                 }
 
+                // 4. [NEW] 10題 應用題 (Hard / Monster Questions)
+                for (let i = 1; i <= 10; i++) {
+                    const result = n * i;
+                    // 隨機選擇一種題型模板
+                    const templates = [
+                        { q: `一盒巧克力有 ${n} 顆，老師買了 ${i} 盒，請問共有幾顆巧克力？`, a: result },
+                        { q: `小明每天存 ${n} 元，持續存了 ${i} 天，請問他總共存了多少錢？`, a: result },
+                        { q: `一隻外星章魚有 ${n} 隻觸手，${i} 隻外星章魚共有幾隻觸手？`, a: result },
+                        { q: `每組分發 ${n} 張色紙，全班有 ${i} 組，請問老師共需要準備幾張色紙？`, a: result },
+                        { q: `一個魔法電池可以讓機器人跑 ${n} 公里，${i} 個電池可以跑幾公里？`, a: result }
+                    ];
+                    const t = templates[Math.floor(Math.random() * templates.length)];
+                    
+                    // 應用題採用選擇題形式
+                    const answers = [t.a];
+                    while (answers.length < 4) {
+                        const offset = (Math.floor(Math.random() * 15) + 3) * (Math.random() > 0.5 ? 1 : -1);
+                        const wrong = t.a + offset;
+                        if (wrong > 0 && !answers.includes(wrong)) {
+                            answers.push(wrong);
+                        }
+                    }
+                    const shuffled = answers.sort(() => Math.random() - 0.5);
+                    const correctIdx = shuffled.indexOf(t.a);
+
+                    questions.push({
+                        type: 'mc',
+                        q: t.q,
+                        a: shuffled.map(String),
+                        correct: correctIdx,
+                        difficulty: 'hard' // 標記為困難，專門給怪獸用
+                    });
+                }
+
                 missions[`mission_mul_${n}`] = {
-                    title: `🧮 ${n} 的乘法挑戰 (30題)`,
+                    title: `🧮 ${n} 的乘法挑戰 (40題)`,
                     questions: questions
                 };
             }
@@ -872,6 +917,9 @@
                     
                     const setAuto = document.getElementById('set-auto-read'); if (setAuto) setAuto.checked = window.state.autoRead;
                     const setDpad = document.getElementById('set-dpad-right'); if (setDpad) setDpad.checked = window.state.isDpadOnRight;
+                    // Restore voice settings
+                    const vSelect = document.getElementById('voice-select'); if(vSelect) vSelect.value = window.state.voiceURI || '';
+                    const vRate = document.getElementById('voice-rate'); if(vRate) { vRate.value = window.state.speechRate || 1; document.getElementById('rate-value').innerText = vRate.value; }
 
                     if(hatMesh) {
                         const hInfo = config.hats[window.state.hatIndex];
@@ -902,8 +950,25 @@
 
         window.initTTS = function() {
             const vSelect = document.getElementById('voice-select');
-            const pop = () => { const voices = speechSynthesis.getVoices(); if (vSelect) vSelect.innerHTML = voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === window.state.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`).join(''); };
-            pop(); if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = pop;
+            const pop = () => { 
+                const voices = speechSynthesis.getVoices(); 
+                if (vSelect) {
+                    vSelect.innerHTML = voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === window.state.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`).join('');
+                }
+            };
+            pop(); 
+            if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = pop;
+        };
+
+        window.updateVoiceSettings = function() {
+            const vSelect = document.getElementById('voice-select');
+            const vRate = document.getElementById('voice-rate');
+            if (vSelect) window.state.voiceURI = vSelect.value;
+            if (vRate) {
+                window.state.speechRate = parseFloat(vRate.value);
+                document.getElementById('rate-value').innerText = window.state.speechRate;
+            }
+            window.saveProgress();
         };
 
         window.showToast = function(m) { 
@@ -1293,7 +1358,7 @@
             window.state.isAnswering = true;
             const type = window.state.currentObject.userData.type;
             
-            // 怪物強制困難度，其他依據任務難度設定，但這裡我們統一使用任務池的難度
+            // 怪獸需要 'hard' 題目 (應用題)，其他則是 normal
             const reqDiff = type === 'monster' ? 'hard' : 'normal';
             
             // Get questions from Active Mission
@@ -1301,28 +1366,34 @@
             const mission = window.globalMissions[missionId] || window.globalMissions['mission_mul_2'];
             let pool = mission.questions || [];
             
-            // 如果池子空了（不應該發生），回退
+            // 避免空池
             if(pool.length === 0) pool = window.globalMissions['mission_mul_2'].questions;
 
             // --- 智能選題邏輯 ---
-            // 找出所有還沒答對過的題目索引
             const allIndices = pool.map((_, i) => i);
             const remainingIndices = allIndices.filter(i => !window.state.completedQuestions.includes(i));
-
-            let targetPool = []; 
-
+            
+            let availablePool = [];
             if (remainingIndices.length > 0) {
-                 // 這裡簡化邏輯：只要還有沒答過的，就隨機選一題
-                 targetPool = remainingIndices.map(i => pool[i]);
+                 availablePool = remainingIndices.map(i => pool[i]);
             } else {
-                // 全部答完了 (或者是重玩)，就隨機出題
-                targetPool = pool;
+                 availablePool = pool; // 全部答完了，隨機出
             }
 
-            // Pick one
+            // 根據需求難度過濾題目
+            let targetPool = availablePool.filter(q => {
+                const qDiff = q.difficulty || 'normal';
+                return qDiff === reqDiff;
+            });
+
+            // 如果找不到對應難度的題目 (例如怪獸要求 Hard 但題庫只有 Normal)，則使用所有可用題目
+            if (targetPool.length === 0) {
+                targetPool = availablePool;
+            }
+
+            // Random Pick
             const qIndex = Math.floor(Math.random() * targetPool.length);
             window.state.currentQuestion = targetPool[qIndex];
-            // 找出這題在原始 pool 中的索引，用於追蹤進度
             window.state.currentQuestionIdx = pool.indexOf(window.state.currentQuestion); 
             
             const q = window.state.currentQuestion;
@@ -1337,9 +1408,10 @@
             else if (type === 'fish') { titleEl.innerText = "捕魚中"; titleEl.className = "text-sky-600 font-black text-2xl tracking-widest italic uppercase"; }
             else { titleEl.innerText = "挖礦中"; titleEl.className = "text-blue-600 font-black text-2xl tracking-widest italic uppercase"; }
             
-            // 顯示實際題目的難度，而非觸發物件的難度
+            // 顯示實際題目的難度
             const actualDiff = q.difficulty || 'normal';
             diffBadge.innerText = (actualDiff === 'hard' ? "HARD / 困難" : "NORMAL / 普通");
+            diffBadge.className = actualDiff === 'hard' ? "text-xs font-bold text-white px-2 py-1 rounded bg-red-500 mt-1" : "text-xs font-bold text-white px-2 py-1 rounded bg-slate-400 mt-1";
             
             if (window.state.autoRead) { speakerBtn.classList.remove('hidden'); window.speak(q.q); } else speakerBtn.classList.add('hidden');
             
@@ -1475,9 +1547,17 @@
             if (u.type !== 'monster') { scene.remove(window.state.currentObject); window.state.currentObject.userData.active = false; }
             else { scene.remove(window.state.currentObject); window.state.currentObject.userData.active = false; }
             
-            window.updateUI(); window.saveProgress(); window.closeQuestion();
+            window.updateUI(); window.saveProgress();
+            
+            // 重要修改：如果是怪獸，先關閉題目視窗，再彈出獎勵
+            if (u.type === 'monster') {
+                window.closeQuestion(); 
+            } else if (u.type !== 'fish') {
+                window.closeQuestion();
+            }
 
             if (rewardItems.length > 0 && u.type === 'fish') {
+                window.closeQuestion(); // 確保捕魚也關閉
                 const list = document.getElementById('reward-list'); list.innerHTML = '';
                 rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
                 document.getElementById('reward-modal').classList.remove('hidden');
@@ -1539,7 +1619,11 @@
                         window.state.inventory['chest']++; const rO = ['stone', 'iron', 'gold'][Math.floor(Math.random() * 3)]; window.state.inventory[rO] += 5; 
                         window.showToast(`🔥 連對 10 題！獲得：神秘寶箱 x1 + ${config.oreTypes[rO].name} x5`); window.finishOk(true); 
                     }, 500);
-                } else setTimeout(() => window.finishOk(false), 1000);
+                } else {
+                    // 如果是怪獸，快速顯示獎勵
+                    const delay = (type === 'monster') ? 600 : 1000;
+                    setTimeout(() => window.finishOk(false), delay);
+                }
             } else {
                 window.state.streak = 0; fb.innerText = "答錯！受到傷害 -15 體力"; fb.style.color = "#ef4444";
                 window.state.health = Math.max(0, window.state.health - 15); window.updateUI();
@@ -1661,9 +1745,14 @@
             
             const u = new SpeechSynthesisUtterance(spokenText); 
             u.lang = 'zh-TW'; 
-            u.rate = window.state.speechRate; 
-            const sv = speechSynthesis.getVoices().find(v => v.voiceURI === window.state.voiceURI); 
-            if (sv) u.voice = sv; 
+            u.rate = window.state.speechRate || 1.0; 
+            
+            // 優先使用使用者選擇的語音
+            if (window.state.voiceURI) {
+                const sv = speechSynthesis.getVoices().find(v => v.voiceURI === window.state.voiceURI);
+                if (sv) u.voice = sv;
+            }
+            
             window.speechSynthesis.speak(u); 
         }
         window.speakQuestion = () => { if(window.state.currentQuestion) window.speak(window.state.currentQuestion.q); }
