@@ -53,7 +53,7 @@
         #reward-modal.modal-mask { z-index: 9500 !important; }
         #delete-mission-modal.modal-mask { z-index: 9500 !important; }
         
-        .modal-body { background: white; width: 95%; max-width: 750px; border-radius: 40px; position: relative; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; border-top: 16px solid #3b82f6; }
+        .modal-body { background: white; width: 95%; max-width: 800px; border-radius: 30px; position: relative; display: flex; flex-direction: column; max-height: 95vh; overflow: hidden; border-top: 16px solid #3b82f6; }
 
         #blocker { position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 6000; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; overflow-y: auto; }
         
@@ -66,6 +66,20 @@
         /* Mission Progress Bar */
         .mission-progress-container { width: 100%; background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 5px; }
         .mission-progress-bar { height: 100%; background: #10b981; width: 0%; transition: width 0.5s ease; }
+        
+        #q-options { display: grid; gap: 12px; width: 100%; }
+        
+        /* NPC Dialog */
+        .dialog-bubble {
+            background: white; border: 4px solid #3b82f6; border-radius: 20px; padding: 20px;
+            text-align: left; position: relative; max-width: 500px; width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .dialog-bubble:after {
+            content: ''; position: absolute; bottom: -15px; left: 30px;
+            border-width: 15px 15px 0; border-style: solid; border-color: #3b82f6 transparent transparent transparent;
+        }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
     </style>
 </head>
 <body class="">
@@ -74,7 +88,9 @@
     <div id="blocker">
         <div class="text-center p-8 bg-white rounded-[3rem] shadow-2xl border-[12px] border-blue-500 max-w-xl mx-4 w-full my-10 text-slate-800">
             <h1 class="text-5xl sm:text-6xl font-black text-blue-600 mb-2 italic tracking-tighter uppercase text-center">MINING KING</h1>
-            <p class="text-xl font-bold text-slate-500 mb-8 italic text-center">挖礦學習王：乘法特訓版</p>
+            <p class="text-xl font-bold text-slate-500 mb-4 italic text-center">挖礦學習王：乘法特訓版</p>
+            <!-- 加入署名 -->
+            <p class="text-sm font-bold text-slate-400 mb-8 tracking-widest bg-slate-100 py-1 px-4 rounded-full inline-block">由特工365製作</p>
             
             <div class="bg-blue-50 p-6 rounded-[2rem] mb-6 border border-blue-100 text-left space-y-4">
                 <div class="grid grid-cols-2 gap-4">
@@ -88,7 +104,6 @@
                     </div>
                 </div>
 
-                <!-- 任務選擇 (Question Bank) -->
                 <div>
                     <label class="block text-slate-600 font-black mb-2 ml-2">📜 選擇任務 (乘法關卡)</label>
                     <select id="login-mission-select" class="w-full p-4 rounded-2xl border-2 border-blue-200 font-bold text-lg focus:outline-none focus:border-blue-500 text-slate-800 bg-white">
@@ -177,7 +192,6 @@
     <!-- 彈窗區域 -->
     <div id="modal-container" class="hidden text-slate-800">
         
-        <!-- 老師登入彈窗 (新) -->
         <div id="teacher-login-modal" class="modal-mask hidden">
             <div class="battle-card bg-slate-800 border-blue-400 w-[400px]">
                 <h2 class="text-3xl font-black text-blue-400 mb-6 italic text-center">老師專區</h2>
@@ -190,7 +204,25 @@
             </div>
         </div>
 
-        <!-- 系統選單彈窗 -->
+        <!-- NPC 對話視窗 -->
+        <div id="npc-modal" class="modal-mask hidden">
+            <div class="flex flex-col items-center">
+                <div class="dialog-bubble mb-4">
+                    <div class="flex items-start gap-2">
+                        <span id="npc-tts-icon" class="text-blue-500 text-2xl hidden animate-pulse interactive hover:text-blue-600 active:scale-95 transition-transform p-1" onclick="window.speak(document.getElementById('npc-text').innerText)">🔊</span>
+                        <p id="npc-text" class="text-2xl font-black text-slate-800 leading-relaxed"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-slate-200 border-4 border-white shadow-lg overflow-hidden flex items-center justify-center text-3xl">👤</div>
+                    <div class="text-white font-black text-xl text-shadow-sm">路人冒險家</div>
+                </div>
+                <button onclick="window.closeNPCModal()" class="mt-8 bg-white text-blue-600 px-8 py-3 rounded-full font-black text-xl shadow-lg interactive hover:scale-105 transition-transform">
+                    知道了！
+                </button>
+            </div>
+        </div>
+
         <div id="system-menu-modal" class="modal-mask hidden">
             <div class="battle-card bg-slate-800 border-blue-400 w-[400px]">
                 <h2 class="text-3xl font-black text-blue-400 mb-6 italic text-center">系統選單</h2>
@@ -214,7 +246,6 @@
             </div>
         </div>
 
-        <!-- 學生設定彈窗 (新) -->
         <div id="student-settings-modal" class="modal-mask hidden">
             <div class="modal-body p-8 border-t-slate-500">
                 <div class="flex justify-between items-center mb-8">
@@ -222,18 +253,15 @@
                     <button onclick="window.toggleModal('student-settings-modal')" class="text-3xl text-slate-300 hover:text-slate-500">✕</button>
                 </div>
                 <div class="space-y-6">
-                     <!-- 語音設定 -->
                      <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4">
                         <p class="font-black text-xl text-blue-600 italic">語音設定</p>
                         <label class="flex items-center gap-4 font-bold text-slate-700 interactive">
                             <input type="checkbox" class="w-6 h-6 rounded text-blue-600" onchange="window.state.autoRead = this.checked; window.saveProgress()" id="set-auto-read">
-                            題目自動語音報讀
+                            題目/NPC對話 自動語音報讀
                         </label>
-                        <!-- 新增：語音選擇與語速調整 -->
                         <div class="flex flex-col gap-2">
                              <label class="font-bold text-slate-600">🗣️ 選擇語音 (Voice)</label>
                              <select id="voice-select" class="p-3 rounded-xl border-2 border-slate-300 bg-white font-bold text-slate-700" onchange="window.updateVoiceSettings()">
-                                 <!-- JS Populated -->
                              </select>
                         </div>
                         <div class="flex flex-col gap-2">
@@ -242,7 +270,6 @@
                         </div>
                     </div>
 
-                    <!-- 介面設定 -->
                      <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 space-y-4">
                         <p class="font-black text-xl text-indigo-600 italic">介面設定</p>
                         <label class="flex items-center gap-4 font-bold text-slate-700 interactive">
@@ -257,7 +284,6 @@
             </div>
         </div>
 
-        <!-- 刪除任務確認彈窗 -->
         <div id="delete-mission-modal" class="modal-mask hidden">
             <div class="battle-card bg-slate-800 border-red-500 text-slate-800 w-[400px]">
                 <div class="text-6xl mb-4">⚠️</div>
@@ -326,18 +352,20 @@
         </div>
 
         <div id="question-modal" class="modal-mask hidden">
-            <div class="modal-body p-10 text-slate-800">
-                <button onclick="window.closeQuestion()" class="absolute top-6 right-8 text-5xl text-slate-300">✕</button>
-                <div class="flex justify-between items-center mb-8">
+            <div class="modal-body px-6 py-6 sm:px-10 sm:py-8 text-slate-800">
+                <button onclick="window.closeQuestion()" class="absolute top-4 right-6 text-4xl text-slate-300 hover:text-slate-500">✕</button>
+                <div class="flex justify-between items-center mb-4 sm:mb-6">
                     <div class="flex flex-col items-start">
-                        <h2 id="q-title" class="text-blue-600 font-black text-2xl tracking-widest italic uppercase">挖礦中</h2>
+                        <h2 id="q-title" class="text-blue-600 font-black text-xl sm:text-2xl tracking-widest italic uppercase">挖礦中</h2>
                         <span id="q-diff-badge" class="text-xs font-bold text-white px-2 py-1 rounded bg-slate-400 mt-1">NORMAL</span>
                     </div>
-                    <button id="tts-btn" onclick="window.speakQuestion()" class="bg-blue-50 p-4 rounded-full text-2xl interactive hover:bg-blue-100 transition-all text-slate-800">🔊</button>
+                    <button id="tts-btn" onclick="window.speakQuestion()" class="bg-blue-50 p-3 sm:p-4 rounded-full text-xl sm:text-2xl interactive hover:bg-blue-100 transition-all text-slate-800 mr-8">🔊</button>
                 </div>
-                <p id="q-text" class="text-4xl font-black text-slate-800 mb-10 leading-tight text-center italic text-slate-800"></p>
-                <div id="q-options" class="grid grid-cols-1 gap-4 overflow-y-auto custom-scrollbar p-2 text-slate-800"></div>
-                <div id="q-feedback" class="mt-8 text-center text-2xl font-black min-h-[1.5em] text-slate-800"></div>
+                <div class="flex-1 flex flex-col justify-center">
+                    <p id="q-text" class="text-2xl sm:text-4xl font-black text-slate-800 mb-6 sm:mb-8 leading-tight text-center italic text-slate-800"></p>
+                    <div id="q-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 overflow-y-auto custom-scrollbar text-slate-800 w-full"></div>
+                </div>
+                <div id="q-feedback" class="mt-4 sm:mt-6 text-center text-xl sm:text-2xl font-black min-h-[1.5em] text-slate-800"></div>
             </div>
         </div>
 
@@ -407,12 +435,11 @@
     </div>
 
     <script type="module">
-        // Import Firebase Functions from CDN (Compatible with GitHub Pages)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, deleteField, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-        // --- 0. 宣告全域 3D 物件 (解決 ReferenceError) ---
+        // --- 0. 宣告全域 3D 物件 ---
         let scene = null, camera = null, renderer = null, clock = null;
         let playerGroup = null, visualGroup = null, pickaxeMesh = null, hatMesh = null, bodyMesh = null;
         let fishingRodMesh = null, fishingNetMesh = null, boatMesh = null;
@@ -421,8 +448,30 @@
         let isInitialized = false;
         let playerLight = null;
 
-        // --- 1. Firebase 初始化 (使用您提供的設定) ---
-        // 這些設定對應到您的 Firebase 專案，請務必在 Console 中啟用 Anonymous Auth 和 Firestore
+        const npcQuotes = [
+            "加油！你一定行的！", 
+            "今天的努力是為了明天的收穫！", 
+            "數學其實很有趣喔！", 
+            "慢慢來，不要急，你正在進步！", 
+            "哇！你的裝備真帥氣！", 
+            "多算幾題，腦袋會變聰明！",
+            "記得要看清楚題目喔！",
+            "休息一下，喝口水再繼續吧！",
+            "不要放棄，答案就在眼前！",
+            "你是最棒的冒險家！",
+            "我相信你可以挑戰成功的！",
+            "失敗沒關係，那是成功的養分！",
+            "你的潛力無限大！",
+            "保持好奇心，世界會更寬廣！",
+            "每天進步一點點，一年就很驚人喔！",
+            "遇到困難深呼吸，你可以解決的！",
+            "學習是最好的寶藏！",
+            "專注當下，你就在發光！",
+            "別忘了給自己一個微笑！",
+            "勇氣不是不害怕，而是面對害怕！"
+        ];
+
+        // --- 1. Firebase 初始化 ---
         const firebaseConfig = {
             apiKey: "AIzaSyCig99Cq6A2y7n5xodMonahYWJlB3AtV3c",
             authDomain: "miningking-b0629.firebaseapp.com",
@@ -443,7 +492,6 @@
             console.warn("Firebase 初始化失敗，請檢查設定。", e);
         }
 
-        // 使用固定的 App ID 確保所有學生連線到同一個資料桶
         const appId = 'mining-king-class-v1';
 
         window.fb_auth = auth;
@@ -451,96 +499,48 @@
 
         // --- 2. 狀態與配置 ---
         window.state = {
-            // 學生狀態
             userId: null, money: 0, level: 1, exp: 0, health: 100, streak: 0, playerName: "玩家", password: "",
             inventory: { 'stone': 0, 'iron': 0, 'gold': 0, 'ruby': 0, 'diamond': 0, 'chest': 0, 'pearl': 0, 'chocolate': 0, 'meal': 0, 'energy_drink': 0, 'steak': 0, 'boat': 0, 'fish': 0, 'crab': 0, 'lobster': 0, 'shark': 0, 'headlamp': 0 },
             toolIndex: 0, fishingToolIndex: 0, hatIndex: 0, clothesIndex: 0, ownedHats: [0], 
-            
-            // 任務與設定
-            activeMissionId: 'mission_mul_2', // 預設 2 的乘法
+            activeMissionId: 'mission_mul_2', 
             completedQuestions: [], 
             missionProgress: 0,
-            
             autoRead: false, voiceURI: '', speechRate: 1.0, isTablet: false, isDpadOnRight: false,
-            
-            // 遊戲 Runtime 狀態
             isMining: false, isAnswering: false, miningTime: 0, currentObject: null,
             activeTool: 'pickaxe', currentMap: 'island',
-            pendingDeleteId: null // 待刪除的任務 ID
+            pendingDeleteId: null
         };
         
-        // --- 自動生成乘法任務 (2-10) ---
         function generateMathMissions() {
             const missions = {};
-            
-            // 產生 2 到 10 的乘法表任務
             for (let n = 2; n <= 10; n++) {
                 const questions = [];
-                
-                // 1. 10題 填充題 (Short Answer)
-                for (let i = 1; i <= 10; i++) {
-                    questions.push({
-                        type: 'sa',
-                        q: `${n} x ${i} = ?`,
-                        a: [],
-                        correct: `${n * i}`,
-                        difficulty: 'normal'
-                    });
-                }
-                
-                // 2. 10題 是非題 (True/False)
+                for (let i = 1; i <= 10; i++) questions.push({ type: 'sa', q: `${n} x ${i} = ?`, a: [], correct: `${n * i}`, difficulty: 'normal' });
                 for (let i = 1; i <= 10; i++) {
                     const isCorrect = Math.random() > 0.5;
-                    const result = n * i;
-                    // 若要生成錯誤答案，隨機加減 n 或 1~5，並確保不是負數
+                    let result = n * i;
                     let shownResult = result;
                     if (!isCorrect) {
                         const offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 5) + 1);
                         shownResult = result + offset;
-                        if (shownResult < 0) shownResult = 0;
-                        if (shownResult === result) shownResult = result + 1; // 確保一定錯誤
+                        if (shownResult < 0) shownResult = 0; if (shownResult === result) shownResult = result + 1;
                     }
-                    
-                    questions.push({
-                        type: 'tf',
-                        q: `${n} x ${i} = ${shownResult}`,
-                        a: ["是", "否"],
-                        correct: isCorrect ? 0 : 1, // 0是"是", 1是"否"
-                        difficulty: 'normal'
-                    });
+                    questions.push({ type: 'tf', q: `${n} x ${i} = ${shownResult}`, a: ["是", "否"], correct: isCorrect ? 0 : 1, difficulty: 'normal' });
                 }
-
-                // 3. 10題 選擇題 (Multiple Choice)
                 for (let i = 1; i <= 10; i++) {
                     const result = n * i;
-                    const answers = [result]; // 正確答案
-                    
-                    // 生成 3 個錯誤選項
+                    const answers = [result];
                     while (answers.length < 4) {
                         const offset = (Math.floor(Math.random() * 10) + 1) * (Math.random() > 0.5 ? 1 : -1);
                         const wrong = result + offset;
-                        if (wrong > 0 && !answers.includes(wrong)) {
-                            answers.push(wrong);
-                        }
+                        if (wrong > 0 && !answers.includes(wrong)) answers.push(wrong);
                     }
-                    
-                    // 洗牌選項
                     const shuffled = answers.sort(() => Math.random() - 0.5);
                     const correctIdx = shuffled.indexOf(result);
-                    
-                    questions.push({
-                        type: 'mc',
-                        q: `${n} x ${i} = ?`,
-                        a: shuffled.map(String),
-                        correct: correctIdx,
-                        difficulty: 'normal'
-                    });
+                    questions.push({ type: 'mc', q: `${n} x ${i} = ?`, a: shuffled.map(String), correct: correctIdx, difficulty: 'normal' });
                 }
-
-                // 4. [NEW] 10題 應用題 (Hard / Monster Questions)
                 for (let i = 1; i <= 10; i++) {
                     const result = n * i;
-                    // 隨機選擇一種題型模板
                     const templates = [
                         { q: `一盒巧克力有 ${n} 顆，老師買了 ${i} 盒，請問共有幾顆巧克力？`, a: result },
                         { q: `小明每天存 ${n} 元，持續存了 ${i} 天，請問他總共存了多少錢？`, a: result },
@@ -549,43 +549,26 @@
                         { q: `一個魔法電池可以讓機器人跑 ${n} 公里，${i} 個電池可以跑幾公里？`, a: result }
                     ];
                     const t = templates[Math.floor(Math.random() * templates.length)];
-                    
-                    // 應用題採用選擇題形式
                     const answers = [t.a];
                     while (answers.length < 4) {
                         const offset = (Math.floor(Math.random() * 15) + 3) * (Math.random() > 0.5 ? 1 : -1);
                         const wrong = t.a + offset;
-                        if (wrong > 0 && !answers.includes(wrong)) {
-                            answers.push(wrong);
-                        }
+                        if (wrong > 0 && !answers.includes(wrong)) answers.push(wrong);
                     }
                     const shuffled = answers.sort(() => Math.random() - 0.5);
                     const correctIdx = shuffled.indexOf(t.a);
-
-                    questions.push({
-                        type: 'mc',
-                        q: t.q,
-                        a: shuffled.map(String),
-                        correct: correctIdx,
-                        difficulty: 'hard' // 標記為困難，專門給怪獸用
-                    });
+                    questions.push({ type: 'mc', q: t.q, a: shuffled.map(String), correct: correctIdx, difficulty: 'hard' });
                 }
-
-                missions[`mission_mul_${n}`] = {
-                    title: `🧮 ${n} 的乘法挑戰 (40題)`,
-                    questions: questions
-                };
+                missions[`mission_mul_${n}`] = { title: `🧮 ${n} 的乘法挑戰 (40題)`, questions: questions };
             }
             return missions;
         }
 
-        // 初始化全球任務 (先放預設值，避免 DB 載入失敗時為空)
         window.globalMissions = generateMathMissions();
-        
         window.keys = {};
 
         const config = {
-            pScale: 4.5, playerScale: 7.5, monsterScale: 7.0, playerHitbox: 5.0, 
+            pScale: 4.5, playerScale: 7.5, monsterScale: 12.0, playerHitbox: 5.0, // Monster Scale Increased
             moveSpeed: 0.8, rotationSpeed: 0.25, riverRange: { min: -1600, max: -800 },
             maps: { island: { name: '陽光島嶼', minLevel: 1 }, cave: { name: '幽暗地底', minLevel: 10 } },
             oreTypes: {
@@ -607,8 +590,8 @@
             hats: [
                 { name: "不戴帽子", cost: 0, color: null, effect: { speed: 0, stamina: 0 }, desc: "無效果" },
                 { name: "採礦安全帽", cost: 5000, color: 0xfacc15, effect: { speed: 0, stamina: -2 }, desc: "體力消耗 -2" },
-                { name: "傳奇牛仔帽", cost: 20000, color: 0x78350f, effect: { speed: 0.2, stamina: 0 }, desc: "速度 +20%" },
-                { name: "至尊王冠", cost: 300000, color: 0xfde047, effect: { speed: 0.3, stamina: -5 }, desc: "速度+30%, 體力-5" }
+                { name: "傳奇牛仔帽", cost: 20000, color: 0x78350f, effect: { speed: 0.2, stamina: 0 }, desc: "移動速度 +20%" },
+                { name: "至尊王冠", cost: 300000, color: 0xfde047, effect: { speed: 0.3, stamina: -5 }, desc: "速度+30%, 體力消耗-5" }
             ],
             supplies: {
                 'chocolate': { name: '巧克力棒', heal: 20, cost: 200, icon: '🍫' },
@@ -621,11 +604,8 @@
             costs: { mining: 10, fishing: 10, monster: 30, field: 5 }
         };
 
-        // --- 3. 核心功能定義 ---
-
-        // 檢查老師專區密碼 (改用彈窗)
         window.checkTeacherPassword = function() {
-            document.getElementById('teacher-pwd-input').value = ''; // Clear input
+            document.getElementById('teacher-pwd-input').value = '';
             window.toggleModal('teacher-login-modal');
         };
 
@@ -634,64 +614,49 @@
             if (pwd === 'tset') {
                 window.toggleModal('teacher-login-modal');
                 window.toggleModal('settings-modal');
-                // 如果已經在系統選單內，要關閉它
                 document.getElementById('system-menu-modal').classList.add('hidden');
             } else {
                 window.showToast("❌ 密碼錯誤！");
             }
         };
 
-        // 讀取全球任務 (包含老師上傳的和預設的)
         async function loadGlobalMissions() {
             try {
-                // 1. 總是先產生內建的乘法任務，確保就算離線也能玩
                 let missions = generateMathMissions();
-
-                // 2. 如果有資料庫連線，嘗試合併雲端資料
                 if (db) { 
                     try {
                         const snap = await getDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'global_missions', 'master'));
                         if (snap.exists()) {
                             const data = snap.data();
-                            // 合併資料：內建任務 + 雲端任務
                             missions = { ...missions, ...data.missions };
                         }
                     } catch (err) {
                         console.warn("無法讀取雲端任務 (可能未設定 Firebase)，僅使用內建題庫。", err);
                     }
                 }
-                
                 window.globalMissions = missions;
-                
             } catch(e) { 
                 console.error("載入任務發生錯誤:", e); 
-                // 發生嚴重錯誤時，至少保證內建題庫可用
                 window.globalMissions = generateMathMissions();
             } finally {
-                // 3. 無論如何都要更新 UI 下拉選單
                 updateMissionDropdowns();
                 renderTeacherMissionList();
             }
         }
 
-        // 儲存全球任務 (老師上傳)
         async function uploadMission() {
-            if (!db) { alert("無法連接資料庫，無法上傳任務。(如果是 GitHub Pages 版，請確認 Firebase Config)"); return; }
+            if (!db) { alert("無法連接資料庫"); return; }
             const title = document.getElementById('new-mission-title').value.trim();
             const raw = document.getElementById('import-area').value.trim();
-            if(!title) { window.showToast("請輸入任務標題"); return; }
-            if(!raw) { window.showToast("請輸入CSV內容"); return; }
+            if(!title || !raw) { window.showToast("請輸入完整資訊"); return; }
 
             const questions = [];
             const lines = raw.split(/\r?\n/);
-            
             lines.forEach(l => {
                 const p = l.split(',').map(s => s.trim());
                 if (p.length < 3) return;
-                
                 const type = p[0].toLowerCase();
                 const diff = (p[p.length-1] && p[p.length-1].trim() === 'hard') ? 'hard' : 'normal';
-                
                 let rawCorrect = parseInt(p[6]);
                 if (isNaN(rawCorrect) || rawCorrect < 1 || rawCorrect > 4) rawCorrect = 1;
                 const correctIdx = rawCorrect - 1; 
@@ -705,138 +670,84 @@
                 }
             });
 
-            if(questions.length === 0) { window.showToast("無效的題目格式或內容為空"); return; }
-
+            if(questions.length === 0) { window.showToast("無效的題目格式"); return; }
             const missionId = 'mission_custom_' + Date.now();
             const newMission = { title, questions };
-            
-            // 先更新本地狀態，讓老師可以馬上看到
             window.globalMissions[missionId] = newMission;
-            
             try {
-                // Save to Firestore (Merging with existing)
                 await setDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'global_missions', 'master'), {
                     missions: { [missionId]: newMission }
                 }, { merge: true });
-                
                 window.showToast("任務發布成功！");
                 document.getElementById('new-mission-title').value = '';
                 document.getElementById('import-area').value = '';
                 updateMissionDropdowns();
                 renderTeacherMissionList();
-            } catch(e) { 
-                console.error(e); 
-                window.showToast("上傳失敗，請檢查網路或資料庫設定"); 
-            }
+            } catch(e) { console.error(e); window.showToast("上傳失敗"); }
         }
 
-        // --- 刪除任務相關 (新版: 使用彈窗確認) ---
         window.openDeleteConfirm = function(id) {
-            if(id.startsWith('mission_mul_')) { window.showToast("內建乘法任務無法刪除"); return; }
+            if(id.startsWith('mission_mul_')) { window.showToast("內建任務無法刪除"); return; }
             window.state.pendingDeleteId = id;
-            // 顯示確認彈窗
             window.toggleModal('delete-mission-modal');
         }
 
         window.closeDeleteConfirm = function() {
             window.state.pendingDeleteId = null;
-            // 關閉確認彈窗 (注意：這裡不應直接 toggleModal，因為可能狀態不同步，建議用 add('hidden'))
             document.getElementById('delete-mission-modal').classList.add('hidden');
-            // 如果沒有其他彈窗開啟，隱藏主容器
-            if(document.querySelectorAll('.modal-mask:not(.hidden)').length === 0) {
-                document.getElementById('modal-container').classList.add('hidden');
-            }
+            if(document.querySelectorAll('.modal-mask:not(.hidden)').length === 0) document.getElementById('modal-container').classList.add('hidden');
         }
 
         window.confirmDeleteMission = async function() {
             const id = window.state.pendingDeleteId;
             if (!id) return;
-
-            window.closeDeleteConfirm(); // 先關閉彈窗
-
+            window.closeDeleteConfirm();
             if (window.state.activeMissionId === id) {
-                window.state.activeMissionId = 'mission_mul_2'; // 回到基礎乘法
+                window.state.activeMissionId = 'mission_mul_2';
                 window.state.completedQuestions = [];
                 window.state.missionProgress = 0;
                 window.updateUI(); 
-                window.showToast("當前任務已刪除，自動切換回預設任務");
+                window.showToast("任務已刪除，切換回預設任務");
             }
-
-            // 更新本地資料
             delete window.globalMissions[id];
             renderTeacherMissionList();
             updateMissionDropdowns();
-
-            // 更新雲端資料
             if (db) {
                 try {
                     const docRef = doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'global_missions', 'master');
-                    await updateDoc(docRef, {
-                        [`missions.${id}`]: deleteField()
-                    });
-                    window.showToast("✅ 任務已從伺服器刪除");
-                } catch(e) { 
-                    console.error("Delete failed:", e); 
-                    window.showToast("❌ 刪除失敗：無法連接伺服器");
-                }
+                    await updateDoc(docRef, { [`missions.${id}`]: deleteField() });
+                } catch(e) { console.error(e); }
             }
         }
 
-        window.openSystemMenu = () => {
-            window.toggleModal('system-menu-modal');
-        }
+        window.openSystemMenu = () => { window.toggleModal('system-menu-modal'); }
 
         function updateMissionDropdowns() {
             const sels = [document.getElementById('login-mission-select')];
             const missionListUI = document.getElementById('mission-list-ui');
-            
             if(missionListUI) missionListUI.innerHTML = '';
-
-            // 排序任務：讓乘法 2-10 始終排在最前面
             const sortedKeys = Object.keys(window.globalMissions).sort((a, b) => {
                 const isAmul = a.startsWith('mission_mul_');
                 const isBmul = b.startsWith('mission_mul_');
-                
-                // 1. 如果兩個都是乘法任務，按數字排序
-                if (isAmul && isBmul) {
-                    return parseInt(a.split('_')[2]) - parseInt(b.split('_')[2]);
-                }
-                
-                // 2. 如果只有 A 是乘法，A 排前面
-                if (isAmul) return -1;
-                
-                // 3. 如果只有 B 是乘法，B 排前面
-                if (isBmul) return 1;
-                
-                // 4. 其他任務按預設 (字母) 排序或時間戳
-                return 0;
+                if (isAmul && isBmul) return parseInt(a.split('_')[2]) - parseInt(b.split('_')[2]);
+                if (isAmul) return -1; if (isBmul) return 1; return 0;
             });
-
-            const optsHTML = sortedKeys.map(id => {
-                const m = window.globalMissions[id];
-                return `<option value="${id}">${m.title}</option>`;
-            }).join('');
-            
+            const optsHTML = sortedKeys.map(id => `<option value="${id}">${window.globalMissions[id].title}</option>`).join('');
             sels.forEach(s => { if(s) s.innerHTML = optsHTML; });
-
             if(missionListUI) {
                 sortedKeys.forEach(id => {
                      const m = window.globalMissions[id];
                      const isAct = window.state.activeMissionId === id;
                      const isCompleted = window.state.completedMissionIds && window.state.completedMissionIds.includes(id);
-                     
                      let btnClass = `w-full text-left p-4 rounded-xl border-2 font-bold mb-2 transition-all `;
                      if (isAct) btnClass += 'bg-emerald-100 border-emerald-500 text-emerald-800';
                      else if (isCompleted) btnClass += 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed';
                      else btnClass += 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100';
-
                      const btn = document.createElement('button');
                      btn.className = btnClass;
                      btn.disabled = isCompleted;
                      btn.innerHTML = `<div class="flex justify-between items-center"><span>${isCompleted ? '🏆 ' : ''}${m.title}</span> <span class="text-xs bg-white px-2 py-1 rounded border">${m.questions.length}題</span></div>`;
-                     if (!isCompleted) {
-                         btn.onclick = () => { window.switchMission(id); window.toggleModal('mission-select-modal'); };
-                     }
+                     if (!isCompleted) btn.onclick = () => { window.switchMission(id); window.toggleModal('mission-select-modal'); };
                      missionListUI.appendChild(btn);
                 });
             }
@@ -846,26 +757,13 @@
             const list = document.getElementById('teacher-mission-list'); if(!list) return;
             list.innerHTML = '';
             Object.entries(window.globalMissions).forEach(([id, m]) => {
-                // 不顯示內建的乘法任務在管理列表，避免誤刪
                 if(id.startsWith('mission_mul_')) return;
-                list.innerHTML += `
-                    <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                        <div>
-                            <div class="font-black text-slate-700">${m.title}</div>
-                            <div class="text-xs text-slate-400">${m.questions.length} 題</div>
-                        </div>
-                        <button id="btn-del-${id}" onclick="window.openDeleteConfirm('${id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg font-bold">刪除</button>
-                    </div>
-                `;
+                list.innerHTML += `<div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm"><div><div class="font-black text-slate-700">${m.title}</div><div class="text-xs text-slate-400">${m.questions.length} 題</div></div><button id="btn-del-${id}" onclick="window.openDeleteConfirm('${id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg font-bold">刪除</button></div>`;
             });
         }
 
-        // 存檔 (學生狀態)
         async function saveProgress() {
-            if (!window.state || !window.state.playerName) return;
-            // 如果沒有 DB，暫時無法雲端存檔，可以考慮加 localStorage
-            if (!db) return;
-
+            if (!window.state || !window.state.playerName || !db) return;
             const safeName = window.state.playerName.trim();
             if(!safeName) return;
             try {
@@ -883,10 +781,8 @@
             } catch(e) { console.error("Save error:", e); }
         }
 
-        // 讀檔 (學生狀態)
         async function loadStudentData(name, password) {
             if(!name) return false;
-            // 如果沒有 DB，直接建立新角色
             if (!db) {
                 window.state.playerName = name;
                 window.state.password = password;
@@ -894,33 +790,19 @@
                 window.renderCharSelector();
                 return true;
             }
-
             const safeName = name.trim();
             try {
                 const snap = await getDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'student_saves', safeName));
                 if (snap.exists()) {
                     const data = snap.data(); 
                     if (data.password && data.password !== password) { window.showToast("密碼錯誤！"); return false; }
-                    
-                    const mergedInventory = { ...window.state.inventory, ...data.inventory };
                     Object.assign(window.state, data);
                     window.state.password = password; 
-                    window.state.inventory = mergedInventory;
-                    // Restore mission progress
-                    window.state.activeMissionId = data.activeMissionId || 'mission_mul_2';
-                    window.state.completedQuestions = data.completedQuestions || [];
-                    window.state.completedMissionIds = data.completedMissionIds || [];
-                    
                     window.updatePlayerName(data.playerName);
                     if(data.clothesIndex !== undefined) window.selectCharColor(data.clothesIndex);
                     window.updateHandedness(); window.updateUI(); 
-                    
-                    const setAuto = document.getElementById('set-auto-read'); if (setAuto) setAuto.checked = window.state.autoRead;
-                    const setDpad = document.getElementById('set-dpad-right'); if (setDpad) setDpad.checked = window.state.isDpadOnRight;
-                    // Restore voice settings
                     const vSelect = document.getElementById('voice-select'); if(vSelect) vSelect.value = window.state.voiceURI || '';
                     const vRate = document.getElementById('voice-rate'); if(vRate) { vRate.value = window.state.speechRate || 1; document.getElementById('rate-value').innerText = vRate.value; }
-
                     if(hatMesh) {
                         const hInfo = config.hats[window.state.hatIndex];
                         hatMesh.visible = (window.state.hatIndex > 0);
@@ -938,11 +820,8 @@
             } catch(e) { console.error("Load error:", e); return false; }
         }
 
-        // --- Window 掛載與 UI ---
-
         window.loadGlobalMissions = loadGlobalMissions;
         window.uploadMission = uploadMission;
-        // window.deleteMission is defined above
         window.updateMissionDropdowns = updateMissionDropdowns;
         window.renderTeacherMissionList = renderTeacherMissionList;
         window.saveProgress = saveProgress;
@@ -952,9 +831,7 @@
             const vSelect = document.getElementById('voice-select');
             const pop = () => { 
                 const voices = speechSynthesis.getVoices(); 
-                if (vSelect) {
-                    vSelect.innerHTML = voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === window.state.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`).join('');
-                }
+                if (vSelect) vSelect.innerHTML = voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === window.state.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`).join('');
             };
             pop(); 
             if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = pop;
@@ -998,7 +875,6 @@
             if (bodyMesh) bodyMesh.material.color.setHex(config.clothesColors[idx].color);
         };
 
-        // FIXED: Added missing renderCharSelector function
         window.renderCharSelector = function() {
             const container = document.getElementById('char-selector'); if(!container) return; container.innerHTML = '';
             config.clothesColors.forEach((c, i) => {
@@ -1010,11 +886,10 @@
             });
         };
         
-        // 學生選擇任務 (登入時或遊戲中)
         window.switchMission = function(id) {
              if (!window.globalMissions[id]) id = 'mission_mul_2';
              window.state.activeMissionId = id;
-             window.state.completedQuestions = []; // 重置該次任務進度
+             window.state.completedQuestions = []; 
              window.state.missionProgress = 0;
              window.updateUI();
              window.showToast(`已切換任務：${window.globalMissions[id].title}`);
@@ -1031,7 +906,6 @@
             if(bodyMesh) bodyMesh.material.color.setHex(config.clothesColors[window.state.clothesIndex].color);
             const h = config.hats[window.state.hatIndex]; if(hatMesh) { if (!h.color) hatMesh.visible = false; else { hatMesh.visible = true; hatMesh.material.color.setHex(h.color); } }
             
-            // Mission UI
             const activeM = window.globalMissions[window.state.activeMissionId] || window.globalMissions['mission_mul_2'];
             const uiMName = document.getElementById('ui-mission-name'); if(uiMName) uiMName.innerText = activeM.title;
             const totalQ = activeM.questions.length;
@@ -1040,34 +914,50 @@
             const uiMBar = document.getElementById('ui-mission-bar'); if(uiMBar) uiMBar.style.width = pct + '%';
             const uiMCount = document.getElementById('ui-mission-count'); if(uiMCount) uiMCount.innerText = pct;
 
-            const toolEl = document.getElementById('ui-active-tool');
-            if(toolEl) {
-                if(window.state.activeTool === 'fishing_rod') toolEl.innerText = "魚竿";
-                else if(window.state.activeTool === 'fishing_net') toolEl.innerText = "漁網";
-                else toolEl.innerText = "十字鎬";
-            }
-
             const grid = document.getElementById('backpack-content'); 
             if(grid) {
                 grid.innerHTML = '';
+                
+                // 1. Hat / Equipment Section
+                let sHat = `<div class="bag-section-title">🧢 頭飾收藏</div><div class="grid grid-cols-2 gap-4">`;
+                if (window.state.ownedHats.length > 0) {
+                    window.state.ownedHats.forEach(idx => {
+                        const hat = config.hats[idx];
+                        const isEquipped = window.state.hatIndex === idx;
+                        sHat += `
+                            <div class="bg-slate-50 p-4 rounded-2xl border flex flex-col gap-2 relative ${isEquipped ? 'border-blue-500 bg-blue-50' : ''}">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-3xl">🧢</span>
+                                    <div>
+                                        <div class="font-black text-slate-900">${hat.name}</div>
+                                        <div class="text-xs font-bold text-slate-500">${hat.desc}</div>
+                                    </div>
+                                </div>
+                                <button onclick="${isEquipped ? 'window.unequipHat()' : `window.equipHat(${idx})`}" 
+                                        class="w-full py-2 rounded-xl font-bold text-sm ${isEquipped ? 'bg-slate-200 text-slate-600' : 'bg-blue-500 text-white shadow active:scale-95'}">
+                                    ${isEquipped ? '卸下' : '裝備'}
+                                </button>
+                            </div>`;
+                    });
+                } else {
+                    sHat += `<div class="col-span-2 text-center text-gray-400 font-bold py-4">尚未擁有任何頭飾</div>`;
+                }
+                sHat += `</div>`;
+                grid.innerHTML += sHat;
+
+                // 2. Tools
                 let s3 = `<div class="bag-section-title">🛠️ 裝備與工具</div><div class="grid grid-cols-2 gap-4">`;
                 const mTool = config.miningTools[window.state.toolIndex];
                 s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3"><span class="text-3xl">⛏️</span><div><div class="font-bold text-slate-700 text-sm">採礦工具</div><div class="font-black text-slate-900">${mTool.name}</div></div></div>`;
                 if (window.state.fishingToolIndex > 0) {
                     const fTool = config.fishingTools[window.state.fishingToolIndex];
                     s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3"><span class="text-3xl">${fTool.icon}</span><div><div class="font-bold text-slate-700 text-sm">捕魚工具</div><div class="font-black text-slate-900">${fTool.name}</div></div></div>`;
-                } else {
-                    s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3 opacity-60"><span class="text-3xl">🖐️</span><div><div class="font-bold text-slate-700 text-sm">捕魚工具</div><div class="font-black text-slate-900">空手</div></div></div>`;
                 }
                 if (window.state.inventory.boat > 0) s3 += `<div class="bg-blue-50 p-4 rounded-2xl border-2 border-blue-200 flex items-center gap-3"><span class="text-3xl">🛶</span><div><div class="font-bold text-blue-700 text-sm">交通工具</div><div class="font-black text-blue-900">渡河小船</div></div></div>`;
-                if (window.state.hatIndex > 0) {
-                    const hat = config.hats[window.state.hatIndex];
-                    s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3"><span class="text-3xl">🧢</span><div><div class="font-bold text-slate-700 text-sm">頭飾</div><div class="font-black text-slate-900">${hat.name}</div></div></div>`;
-                }
-                if (window.state.inventory.headlamp > 0) {
-                    s3 += `<div class="bg-yellow-50 p-4 rounded-2xl border-2 border-yellow-200 flex items-center gap-3"><span class="text-3xl">🔦</span><div><div class="font-bold text-yellow-700 text-sm">特殊裝備</div><div class="font-black text-yellow-900">高流明頭燈</div></div></div>`;
-                }
+                if (window.state.inventory.headlamp > 0) s3 += `<div class="bg-yellow-50 p-4 rounded-2xl border-2 border-yellow-200 flex items-center gap-3"><span class="text-3xl">🔦</span><div><div class="font-bold text-yellow-700 text-sm">特殊裝備</div><div class="font-black text-yellow-900">高流明頭燈</div></div></div>`;
                 s3 += `</div>`; grid.innerHTML += s3;
+
+                // 3. Ores & Items
                 let s1 = `<div class="bag-section-title">💎 礦產與漁獲</div><div class="grid grid-cols-3 gap-4">`;
                 for (let k in config.oreTypes) {
                     if (window.state.inventory[k] > 0) {
@@ -1076,6 +966,8 @@
                     }
                 }
                 s1 += `</div>`; grid.innerHTML += s1;
+
+                // 4. Supplies
                 let s2 = `<div class="bag-section-title">🍱 冒險補給</div><div class="grid grid-cols-2 gap-4">`;
                 for (let k in config.supplies) { if (window.state.inventory[k] > 0) { if (k === 'boat') continue; s2 += `<div class="bg-green-50 p-4 rounded-2xl border-2 border-green-200 shadow-sm flex justify-between items-center text-slate-800"><div><span class="text-3xl">${config.supplies[k].icon}</span> <span class="font-black text-green-700">x${window.state.inventory[k]}</span></div><button onclick="window.useSupply('${k}')" class="bg-green-500 text-white px-3 py-2 rounded-xl font-bold text-sm shadow-md active:scale-95">使用</button></div>`; } }
                 s2 += `</div>`; grid.innerHTML += s2;
@@ -1093,7 +985,6 @@
         };
 
         // --- 3D Scene Functions ---
-        // (保持與之前相同的 3D 建構代碼)
         function createCharacterModel(color = 0x3b82f6, isMonster = false, scaleOverride = null) {
             const group = new THREE.Group(); const s = scaleOverride || config.pScale;
             const skin = isMonster ? 0x111111 : 0xffdbac; const clothes = isMonster ? 0x000000 : color;
@@ -1113,6 +1004,45 @@
             return { group, head, body, la, ra, ll, rl };
         }
 
+        function createMountain(x, z, scale = 1) {
+            // HUGE scale multiplier
+            const finalScale = scale * 10; 
+            const geo = new THREE.ConeGeometry(40 * finalScale, 60 * finalScale, 5); 
+            const mat = new THREE.MeshStandardMaterial({ color: 0x64748b, flatShading: true });
+            const m = new THREE.Mesh(geo, mat);
+            m.position.set(x, 30 * finalScale, z);
+            m.castShadow = true; m.receiveShadow = true;
+            scene.add(m);
+            collidables.push(m);
+            m.userData = { type: 'mountain', radius: 25 * finalScale, active: false };
+        }
+
+        function createNPC(x, z) {
+            // Larger NPC Scale (6.5, between Player 7.5 and old 4.5)
+            const model = createCharacterModel(0x94a3b8, false, 6.5);
+            const npc = model.group;
+            npc.position.set(x, 0, z);
+            
+            const iconGeo = new THREE.CircleGeometry(2.5, 32);
+            const iconMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            const icon = new THREE.Mesh(iconGeo, iconMat);
+            icon.position.y = 22; // Adjusted for height
+            icon.lookAt(x, 1000, z + 100); 
+            
+            const indGeo = new THREE.SphereGeometry(1.5, 8, 8);
+            const indMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+            const ind = new THREE.Mesh(indGeo, indMat);
+            ind.position.y = 22;
+            
+            npc.add(ind);
+            npc.rotation.y = Math.random() * Math.PI * 2;
+            
+            scene.add(npc);
+            objects.push(npc);
+            collidables.push(npc);
+            npc.userData = { type: 'npc', radius: 8.0, active: true };
+        }
+
         function createPlayer() {
             const s = config.playerScale; const model = createCharacterModel(config.clothesColors[window.state.clothesIndex].color, false, s);
             playerGroup = new THREE.Group(); visualGroup = model.group; bodyMesh = model.body;
@@ -1124,7 +1054,6 @@
             const pAnchor = new THREE.Group(); pAnchor.add(handle); pickaxeMesh.position.y = 0.65 * s; pAnchor.add(pickaxeMesh);
             pAnchor.position.set(0, -0.4 * s, 0.3 * s); pAnchor.rotation.x = Math.PI / 4; rightArm.add(pAnchor);
 
-            // Fishing Rod
             const rodHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.05 * s, 0.08 * s, 2.5 * s), new THREE.MeshStandardMaterial({ color: 0x8b4513 }));
             rodHandle.position.y = 1.0 * s; 
             fishingRodMesh = new THREE.Group(); fishingRodMesh.add(rodHandle);
@@ -1136,7 +1065,6 @@
             rightArm.add(fishingRodMesh);
             fishingRodMesh.visible = false;
 
-            // Fishing Net
             fishingNetMesh = new THREE.Group();
             const netHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * s, 0.08 * s, 2.0 * s), new THREE.MeshStandardMaterial({color: 0x5c4033}));
             const netRing = new THREE.Mesh(new THREE.TorusGeometry(0.6 * s, 0.05 * s, 8, 16), new THREE.MeshStandardMaterial({color: 0x94a3b8}));
@@ -1148,7 +1076,6 @@
             rightArm.add(fishingNetMesh);
             fishingNetMesh.visible = false;
 
-            // Boat
             const boatGeo = new THREE.BoxGeometry(1.2 * s, 0.5 * s, 1.2 * s);
             const boatMat = new THREE.MeshStandardMaterial({ color: 0x6F4E37 });
             boatMesh = new THREE.Mesh(boatGeo, boatMat);
@@ -1157,27 +1084,34 @@
             playerGroup.add(boatMesh);
             
             playerGroup.add(visualGroup); scene.add(playerGroup);
-            
-            // Player Light for Cave
             playerLight = new THREE.PointLight(0xffaa00, 1.2, 800);
             playerLight.position.set(0, 50, 0);
             playerGroup.add(playerLight);
         }
 
         function createNature() {
-            const riverGeo = new THREE.PlaneGeometry(800, 10000); const riverMat = new THREE.MeshStandardMaterial({ color: 0x0077be, transparent: true, opacity: 0.9 });
-            const river = new THREE.Mesh(riverGeo, riverMat); river.rotation.x = -Math.PI / 2; river.position.set(-1200, 0.2, 0); scene.add(river);
-            [-2500, 0, 2500].forEach(z => {
+            const riverGeo = new THREE.PlaneGeometry(800, 40000); 
+            const riverMat = new THREE.MeshStandardMaterial({ color: 0x0077be, transparent: true, opacity: 0.9 });
+            const river = new THREE.Mesh(riverGeo, riverMat); 
+            river.rotation.x = -Math.PI / 2; 
+            river.position.set(-1200, 0.2, 0); 
+            scene.add(river);
+
+            for(let z = -15000; z <= 15000; z+= 2500) {
                 const b = new THREE.Mesh(new THREE.BoxGeometry(850, 5, 150), new THREE.MeshStandardMaterial({ color: 0x78350f }));
                 b.position.set(-1200, 3, z); b.receiveShadow = true; scene.add(b);
                 bridges.push({ x: -1200, z: z, width: 850, depth: 150 });
-            });
-            for (let i = 0; i < 200; i++) {
+            }
+
+            for (let i = 0; i < 3000; i++) {
+                const x = (Math.random() - 0.5) * 28000; 
+                const z = (Math.random() - 0.5) * 28000;
+                if(Math.abs(x + 1200) < 450) continue; 
+                
                 const trunk = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 15, 8), new THREE.MeshStandardMaterial({ color: 0x5d4037 })); trunk.position.y = 7.5;
                 const leaves = new THREE.Mesh(new THREE.ConeGeometry(15, 35, 8), new THREE.MeshStandardMaterial({ color: 0x15803d })); leaves.position.y = 30; 
                 const g = new THREE.Group(); g.add(trunk); g.add(leaves);
-                const x = (Math.random() - 0.5) * 5000; const z = (Math.random() - 0.5) * 5000;
-                if(Math.abs(x + 1200) < 450) continue; 
+                
                 g.position.set(x, 0, z); const s = 1.5 + Math.random() * 1.5; g.scale.set(s,s,s); scene.add(g);
                 g.userData = { type: 'tree', radius: 4 * s, active: true }; collidables.push(g);
             }
@@ -1192,18 +1126,116 @@
              g.add(m);
              return g;
         }
+        
+        // --- RESPAWN SYSTEM ---
+        function respawnObject(type, mapType = 'island') {
+            // Find a valid position away from player
+            let attempts = 0;
+            const maxAttempts = 50;
+            const range = (mapType === 'cave') ? 20000 : 25000;
+            
+            while(attempts < maxAttempts) {
+                attempts++;
+                const x = (Math.random() - 0.5) * range; 
+                const z = (Math.random() - 0.5) * range;
+                
+                // Cave specific check
+                if (mapType === 'cave' && Math.abs(x) < 200 && Math.abs(z) < 200) continue;
+                // Island river check
+                if (mapType === 'island' && x > config.riverRange.min && x < config.riverRange.max) continue;
+                
+                const pos = new THREE.Vector3(x, 0, z);
+                
+                // Avoid spawning too close to player
+                if (pos.distanceTo(playerGroup.position) < 100) continue;
+
+                let hitWall = false;
+                for(let c of collidables) { 
+                    if(pos.distanceTo(c.position) < (c.userData.radius + 15)) {
+                        hitWall = true; 
+                        break;
+                    }
+                }
+                if(hitWall) continue;
+
+                // Success! Create object
+                let mesh;
+                if (type === 'monster') {
+                    mesh = createCharacterModel(0x000000, true, config.monsterScale).group; 
+                    mesh.userData = { type: 'monster', radius: 12.0, active: true };
+                } else if (type === 'field') {
+                    mesh = new THREE.Mesh(new THREE.BoxGeometry(25, 0.5, 25), new THREE.MeshStandardMaterial({ color: 0x854d0e })); 
+                    mesh.userData = { type: 'field', radius: 6.0, active: true }; 
+                    mesh.position.y = 0.2;
+                } else if (type === 'ore') {
+                     const keys = Object.keys(config.oreTypes).filter(k => k !== 'chest' && k !== 'fish' && k !== 'pearl' && k !== 'crab' && k !== 'lobster' && k !== 'shark');
+                     const o = keys[Math.floor(Math.random() * keys.length)]; 
+                     mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); 
+                     mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; 
+                     mesh.position.y = 4.5;
+                }
+
+                if (mesh) {
+                    mesh.position.x = x;
+                    mesh.position.z = z;
+                    mesh.castShadow = true;
+                    scene.add(mesh);
+                    objects.push(mesh);
+                    collidables.push(mesh);
+                    return; // Spawned successfully
+                }
+            }
+        }
 
         // --- MAP GENERATION ---
 
         function generateIsland() {
             scene.background = new THREE.Color(0xbae6fd); 
-            scene.fog = new THREE.Fog(0xbae6fd, 150, 1500);
-            const fl = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x22c55e })); 
+            scene.fog = new THREE.Fog(0xbae6fd, 150, 2000); 
+            const fl = new THREE.Mesh(new THREE.PlaneGeometry(40000, 40000), new THREE.MeshStandardMaterial({ color: 0x22c55e })); 
             fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
+            
             createNature();
-            for (let i = 0; i < 1100; i++) {
-                const x = (Math.random() - 0.5) * 6000; const z = (Math.random() - 0.5) * 6000;
+            
+            // Mountains & NPCs...
+            for (let i = 0; i < 60; i++) {
+                const side = Math.floor(Math.random() * 4);
+                let x, z;
+                const offset = (Math.random() - 0.5) * 40000;
+                if (side === 0) { x = -18000 - Math.random() * 2000; z = offset; }
+                else if (side === 1) { x = 18000 + Math.random() * 2000; z = offset; }
+                else if (side === 2) { x = offset; z = -18000 - Math.random() * 2000; }
+                else { x = offset; z = 18000 + Math.random() * 2000; }
+                createMountain(x, z, 2 + Math.random() * 3);
+            }
+            for (let i = 0; i < 30; i++) {
+                 const x = (Math.random() - 0.5) * 6000; 
+                 const z = (Math.random() - 0.5) * 6000;
+                 if(Math.abs(x + 1200) < 500) continue;
+                 createNPC(x, z);
+            }
+
+            // High Density Monster/Ore Generation (Ensure at least 100 monsters)
+            // We run a high volume loop, prioritizing Monsters significantly to reach ~100+
+            let monsterCount = 0;
+            
+            // Phase 1: Force spawn 100 Monsters
+            for(let i=0; i<120; i++) {
+                respawnObject('monster', 'island');
+            }
+            
+            // Phase 2: Force spawn 200 Fields
+             for(let i=0; i<200; i++) {
+                respawnObject('field', 'island');
+            }
+            
+            // Phase 3: General Scatter (Ores, Fish, more Monsters)
+            for (let i = 0; i < 3000; i++) {
+                const x = (Math.random() - 0.5) * 25000; 
+                const z = (Math.random() - 0.5) * 25000;
+                
                 if (Math.abs(x) < 100 && Math.abs(z) < 100) continue;
+                
                 const isR = x > config.riverRange.min && x < config.riverRange.max; let mesh;
                 if (isR) {
                     if (!bridges.some(b => Math.abs(z - b.z) < 300) && Math.random() > 0.6) {
@@ -1214,8 +1246,10 @@
                     }
                 } else {
                     const r = Math.random();
-                    if (r > 0.96) { mesh = createCharacterModel(0x000000, true, config.monsterScale).group; mesh.userData = { type: 'monster', radius: 8.0, active: true }; }
-                    else if (r > 0.8) { mesh = new THREE.Mesh(new THREE.BoxGeometry(25, 0.5, 25), new THREE.MeshStandardMaterial({ color: 0x854d0e })); mesh.userData = { type: 'field', radius: 6.0, active: true }; mesh.position.y = 0.2; }
+                    if (r > 0.98) { // Small extra chance for monster
+                         mesh = createCharacterModel(0x000000, true, config.monsterScale).group; 
+                         mesh.userData = { type: 'monster', radius: 12.0, active: true }; 
+                    }
                     else { 
                         const keys = Object.keys(config.oreTypes).filter(k => k !== 'chest' && k !== 'fish' && k !== 'pearl' && k !== 'crab' && k !== 'lobster' && k !== 'shark');
                         const o = keys[Math.floor(Math.random() * keys.length)]; 
@@ -1228,23 +1262,30 @@
         }
 
         function generateCave() {
-            scene.background = new THREE.Color(0x111111); scene.fog = new THREE.Fog(0x111111, 50, 400); 
-            const fl = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x222222 })); 
+            scene.background = new THREE.Color(0x111111); scene.fog = new THREE.Fog(0x111111, 50, 500); 
+            const fl = new THREE.Mesh(new THREE.PlaneGeometry(30000, 30000), new THREE.MeshStandardMaterial({ color: 0x222222 })); 
             fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
-            for(let i=0; i<400; i++) {
-                const x = (Math.random() - 0.5) * 4000; const z = (Math.random() - 0.5) * 4000;
+            
+            for(let i=0; i<1500; i++) {
+                const x = (Math.random() - 0.5) * 20000; 
+                const z = (Math.random() - 0.5) * 20000;
                 if(Math.abs(x) < 200 && Math.abs(z) < 200) continue; 
                 if (Math.random() > 0.8) { const cry = createCrystal(); cry.position.set(x, 0, z); const s = 1 + Math.random() * 3; cry.scale.set(s,s,s); scene.add(cry); cry.userData = { type: 'crystal', radius: 4 * s, active: false }; collidables.push(cry); } 
                 else { const wGeo = new THREE.BoxGeometry(30 + Math.random()*50, 200, 30 + Math.random()*50); const wMat = new THREE.MeshStandardMaterial({ color: 0x333333 }); const wall = new THREE.Mesh(wGeo, wMat); wall.position.set(x, 0, z); scene.add(wall); wall.userData = { type: 'wall', radius: 40, active: true }; collidables.push(wall); }
             }
-            for (let i = 0; i < 600; i++) {
-                const x = (Math.random() - 0.5) * 4000; const z = (Math.random() - 0.5) * 4000;
+            
+            // Force Spawn Monsters in Cave
+            for(let i=0; i<120; i++) respawnObject('monster', 'cave');
+
+            for (let i = 0; i < 3500; i++) {
+                const x = (Math.random() - 0.5) * 20000; 
+                const z = (Math.random() - 0.5) * 20000;
                 if (Math.abs(x) < 100 && Math.abs(z) < 100) continue;
                 const pos = new THREE.Vector3(x, 0, z); let hitWall = false;
                 for(let c of collidables) { if(pos.distanceTo(c.position) < c.userData.radius + 10) hitWall = true; }
                 if(hitWall) continue;
                 let mesh;
-                if (Math.random() > 0.8) { mesh = createCharacterModel(0xff0000, true, config.monsterScale).group; mesh.userData = { type: 'monster', radius: 8.0, active: true }; } 
+                if (Math.random() > 0.8) { mesh = createCharacterModel(0xff0000, true, config.monsterScale).group; mesh.userData = { type: 'monster', radius: 12.0, active: true }; } 
                 else { const keys = ['gold', 'diamond', 'ruby', 'iron']; const o = keys[Math.floor(Math.random() * keys.length)]; mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; mesh.position.y = 4.5; }
                 if(mesh) { mesh.position.x = x; mesh.position.z = z; mesh.castShadow = true; scene.add(mesh); objects.push(mesh); collidables.push(mesh); }
             }
@@ -1315,7 +1356,6 @@
                 moveDir.normalize(); 
                 visualGroup.rotation.y = THREE.MathUtils.lerp(visualGroup.rotation.y, Math.atan2(moveDir.x, moveDir.z), config.rotationSpeed);
                 
-                // Apply speed buff from hat
                 const hat = config.hats[window.state.hatIndex];
                 const speedMultiplier = 1 + (hat.effect ? hat.effect.speed : 0);
                 const finalSpeed = config.moveSpeed * speedMultiplier;
@@ -1348,8 +1388,11 @@
             if (hint) {
                 if (found) {
                     hint.classList.remove('hidden'); const u = window.state.currentObject.userData;
-                    if(u.type === 'monster') hint.innerText = "[K] 挑戰怪獸 (體力: 30)"; else if(u.type === 'field') hint.innerText = "[K] 搜索田地 (體力: 5)";
-                    else if(u.type === 'fish') hint.innerText = "[K] 捕魚挑戰 (體力: 10)"; else hint.innerText = "[K] 採礦挑戰 (體力: 10)";
+                    if(u.type === 'monster') hint.innerText = "[K] 挑戰怪獸 (體力: 30)"; 
+                    else if(u.type === 'field') hint.innerText = "[K] 搜索田地 (體力: 5)";
+                    else if(u.type === 'fish') hint.innerText = "[K] 捕魚挑戰 (體力: 10)";
+                    else if(u.type === 'npc') hint.innerText = "[K] 與冒險者對話";
+                    else hint.innerText = "[K] 採礦挑戰 (體力: 10)";
                 } else { hint.classList.add('hidden'); window.state.currentObject = null; }
             }
         }
@@ -1357,41 +1400,26 @@
         function triggerChallenge() {
             window.state.isAnswering = true;
             const type = window.state.currentObject.userData.type;
-            
-            // 怪獸需要 'hard' 題目 (應用題)，其他則是 normal
             const reqDiff = type === 'monster' ? 'hard' : 'normal';
             
-            // Get questions from Active Mission
             const missionId = window.state.activeMissionId || 'mission_mul_2';
             const mission = window.globalMissions[missionId] || window.globalMissions['mission_mul_2'];
             let pool = mission.questions || [];
-            
-            // 避免空池
             if(pool.length === 0) pool = window.globalMissions['mission_mul_2'].questions;
 
-            // --- 智能選題邏輯 ---
             const allIndices = pool.map((_, i) => i);
             const remainingIndices = allIndices.filter(i => !window.state.completedQuestions.includes(i));
-            
             let availablePool = [];
-            if (remainingIndices.length > 0) {
-                 availablePool = remainingIndices.map(i => pool[i]);
-            } else {
-                 availablePool = pool; // 全部答完了，隨機出
-            }
+            if (remainingIndices.length > 0) availablePool = remainingIndices.map(i => pool[i]);
+            else availablePool = pool;
 
-            // 根據需求難度過濾題目
             let targetPool = availablePool.filter(q => {
                 const qDiff = q.difficulty || 'normal';
                 return qDiff === reqDiff;
             });
 
-            // 如果找不到對應難度的題目 (例如怪獸要求 Hard 但題庫只有 Normal)，則使用所有可用題目
-            if (targetPool.length === 0) {
-                targetPool = availablePool;
-            }
+            if (targetPool.length === 0) targetPool = availablePool;
 
-            // Random Pick
             const qIndex = Math.floor(Math.random() * targetPool.length);
             window.state.currentQuestion = targetPool[qIndex];
             window.state.currentQuestionIdx = pool.indexOf(window.state.currentQuestion); 
@@ -1408,7 +1436,6 @@
             else if (type === 'fish') { titleEl.innerText = "捕魚中"; titleEl.className = "text-sky-600 font-black text-2xl tracking-widest italic uppercase"; }
             else { titleEl.innerText = "挖礦中"; titleEl.className = "text-blue-600 font-black text-2xl tracking-widest italic uppercase"; }
             
-            // 顯示實際題目的難度
             const actualDiff = q.difficulty || 'normal';
             diffBadge.innerText = (actualDiff === 'hard' ? "HARD / 困難" : "NORMAL / 普通");
             diffBadge.className = actualDiff === 'hard' ? "text-xs font-bold text-white px-2 py-1 rounded bg-red-500 mt-1" : "text-xs font-bold text-white px-2 py-1 rounded bg-slate-400 mt-1";
@@ -1418,17 +1445,27 @@
             const opts = document.getElementById('q-options'); opts.innerHTML = '';
             if (q.type === 'mc' || q.type === 'tf') {
                 q.a.forEach((txt, i) => {
-                    const row = document.createElement('div'); row.className = "flex gap-2 w-full text-slate-800";
                     const b = document.createElement('button');
-                    b.className = "flex-1 text-left p-5 rounded-3xl border-4 border-slate-100 hover:border-blue-500 bg-white text-2xl font-black shadow-sm ui-element text-slate-800";
-                    b.innerText = txt; b.onclick = () => window.checkAns(i);
-                    const s = document.createElement('button');
-                    if (window.state.autoRead) { s.className = "p-5 bg-slate-50 rounded-full text-xl shadow-md ui-element active:scale-90 transition-all text-slate-800"; s.innerHTML = "🔊"; s.onclick = (e) => { e.stopPropagation(); window.speak(txt); }; row.append(b, s); } else row.append(b);
-                    opts.appendChild(row);
+                    b.className = "flex-1 text-left p-3 sm:p-4 rounded-xl border-2 sm:border-4 border-slate-100 hover:border-blue-500 bg-white text-lg sm:text-2xl font-black shadow-sm ui-element text-slate-800 transition-all h-full break-words";
+                    b.innerText = txt; 
+                    b.onclick = () => window.checkAns(i);
+                    
+                    if (window.state.autoRead) { 
+                        const row = document.createElement('div'); 
+                        row.className = "flex gap-2 w-full text-slate-800 h-full";
+                        const s = document.createElement('button');
+                        s.className = "p-3 sm:p-4 bg-slate-50 rounded-xl text-lg sm:text-xl shadow-md ui-element active:scale-90 transition-all text-slate-800 flex items-center justify-center"; 
+                        s.innerHTML = "🔊"; 
+                        s.onclick = (e) => { e.stopPropagation(); window.speak(txt); }; 
+                        row.append(b, s); opts.appendChild(row); 
+                    } else opts.appendChild(b);
                 });
             } else if (q.type === 'sa') {
-                opts.innerHTML = `<input id="sa-ans" class="w-full p-8 rounded-3xl border-4 text-3xl font-black text-center mb-4 ui-element text-slate-800" placeholder="請在此輸入答案...">
-                    <button onclick="window.checkAns(document.getElementById('sa-ans').value.trim())" class="w-full bg-blue-500 text-white p-5 rounded-3xl text-2xl font-black shadow-lg ui-element text-slate-800">提交答案</button>`;
+                const container = document.createElement('div');
+                container.className = "col-span-1 sm:col-span-2 w-full"; 
+                container.innerHTML = `<input id="sa-ans" class="w-full p-4 sm:p-6 rounded-3xl border-4 text-2xl sm:text-3xl font-black text-center mb-4 ui-element text-slate-800" placeholder="請在此輸入答案...">
+                    <button onclick="window.checkAns(document.getElementById('sa-ans').value.trim())" class="w-full bg-blue-500 text-white p-4 sm:p-5 rounded-3xl text-xl sm:text-2xl font-black shadow-lg ui-element text-slate-800">提交答案</button>`;
+                opts.appendChild(container);
             }
             document.getElementById('modal-container').classList.remove('hidden');
             document.getElementById('question-modal').classList.remove('hidden');
@@ -1444,12 +1481,10 @@
             if (!name) { window.showToast("請輸入名字"); return; }
             if (!password) { window.showToast("請輸入密碼"); return; }
 
-            // Ensure missions are loaded first
             await window.loadGlobalMissions();
 
             const success = await window.loadStudentData(name, password);
             if (success) {
-                // Set active mission
                 window.state.activeMissionId = missionId;
                 if (!window.globalMissions[missionId]) window.state.activeMissionId = 'mission_mul_2';
                 
@@ -1505,7 +1540,7 @@
                 const hp = config.specialItems.headlamp;
                 cont.innerHTML += `<button onclick="window.buyHeadlamp()" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${hpowned ? 'border-yellow-500' : 'border-slate-50'}"><span>${hp.icon} ${hp.name}</span> <span class="text-yellow-600">${hpowned ? '已擁有' : '$'+hp.cost}</span></button>`;
             } else if (tab === 'avatar') {
-                config.hats.forEach((h, i) => { const ow = window.state.ownedHats.includes(i); cont.innerHTML += `<button onclick="window.buyHat(${i})" class="w-full flex justify-between p-4 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${window.state.hatIndex === i ? 'border-purple-500' : 'border-slate-50'}"><span>${h.name}</span> <span class="px-4 py-1 rounded-xl ${ow ? 'bg-slate-200 text-slate-500' : 'bg-yellow-400 text-white'}">${ow ? '已擁有' : '$'+h.cost}</span></button>`; });
+                config.hats.forEach((h, i) => { const ow = window.state.ownedHats.includes(i); cont.innerHTML += `<button onclick="window.buyHat(${i})" class="w-full flex justify-between p-4 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${window.state.hatIndex === i ? 'border-purple-500' : 'border-slate-50'}"><div><span>${h.name}</span> <span class="text-xs block text-slate-400">${h.desc}</span></div> <span class="px-4 py-1 rounded-xl ${ow ? 'bg-slate-200 text-slate-500' : 'bg-yellow-400 text-white'}">${ow ? '已擁有' : '$'+h.cost}</span></button>`; });
             } else if (tab === 'supplies') {
                 for (let k in config.supplies) { if(k==='boat')continue; const s = config.supplies[k]; cont.innerHTML += `<button onclick="window.buySupply('${k}')" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 border-green-50 mb-2 font-black text-slate-800"><span>${s.icon} ${s.name} (❤️+${s.heal})</span> <span class="text-green-600">$${s.cost}</span></button>`; }
             }
@@ -1517,7 +1552,6 @@
             const u = window.state.currentObject.userData;
             let gainMoney = 0; let gainExp = 0; let costStamina = 0; let rewardItems = [];
 
-            // Apply Stamina reduction from hat
             const hat = config.hats[window.state.hatIndex];
             const staminaReduction = (hat.effect ? hat.effect.stamina : 0);
 
@@ -1536,7 +1570,6 @@
             } else if (u.type === 'monster') { costStamina = config.costs.monster; gainExp = 500; gainMoney = 200; } 
             else if (u.type === 'field') { costStamina = config.costs.field; gainExp = 200; gainMoney = 50; }
 
-            // Apply buff, ensure cost is at least 1
             const finalCost = Math.max(1, costStamina + staminaReduction);
             window.state.health = Math.max(0, window.state.health - finalCost);
 
@@ -1544,12 +1577,23 @@
             window.state.money += Math.floor(gainMoney); window.state.exp += Math.floor(gainExp);
             if (window.state.exp >= window.state.level * 5000) { window.state.level++; window.state.exp = 0; window.showToast(`升級了！Lv. ${window.state.level}`); }
             
-            if (u.type !== 'monster') { scene.remove(window.state.currentObject); window.state.currentObject.userData.active = false; }
-            else { scene.remove(window.state.currentObject); window.state.currentObject.userData.active = false; }
+            // --- DYNAMIC RESPAWN LOGIC ---
+            // Instead of just setting active=false, we hide it and spawn a replacement elsewhere
+            // This ensures resources never run out
+            const typeToRespawn = u.type;
+            const currentMap = window.state.currentMap;
+            
+            scene.remove(window.state.currentObject); 
+            window.state.currentObject.userData.active = false;
+            
+            // Spawn replacement immediately
+            if (['monster', 'ore', 'field'].includes(typeToRespawn)) {
+                respawnObject(typeToRespawn, currentMap);
+            }
+            // -----------------------------
             
             window.updateUI(); window.saveProgress();
             
-            // 重要修改：如果是怪獸，先關閉題目視窗，再彈出獎勵
             if (u.type === 'monster') {
                 window.closeQuestion(); 
             } else if (u.type !== 'fish') {
@@ -1557,7 +1601,7 @@
             }
 
             if (rewardItems.length > 0 && u.type === 'fish') {
-                window.closeQuestion(); // 確保捕魚也關閉
+                window.closeQuestion(); 
                 const list = document.getElementById('reward-list'); list.innerHTML = '';
                 rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
                 document.getElementById('reward-modal').classList.remove('hidden');
@@ -1573,13 +1617,9 @@
 
         window.checkAns = (ans) => {
             const q = window.state.currentQuestion; const fb = document.getElementById('q-feedback');
-            // Check answer: string comparison or number equality
             let isCorrect = false;
-            if (q.type === 'sa') {
-                isCorrect = (ans.toString() === q.correct.toString());
-            } else {
-                isCorrect = (ans == q.correct);
-            }
+            if (q.type === 'sa') isCorrect = (ans.toString() === q.correct.toString());
+            else isCorrect = (ans == q.correct);
 
             if (isCorrect) {
                 window.state.streak++; const type = window.state.currentObject.userData.type;
@@ -1588,27 +1628,21 @@
                 else if(type === 'fish') msg += "成功捕獲鮮魚 🐟"; else msg += "挖礦成功 ✨";
                 fb.innerText = msg; fb.style.color = "#10b981";
                 
-                // Track progress
                 const idx = window.state.currentQuestionIdx;
                 if (!window.state.completedQuestions.includes(idx) && idx !== undefined && idx >= 0) {
                      window.state.completedQuestions.push(idx);
                 }
                 
-                // Check if Mission Complete
                 const mId = window.state.activeMissionId || 'mission_mul_2';
                 const mission = window.globalMissions[mId];
                 if (mission && window.state.completedQuestions.length >= mission.questions.length && mission.questions.length > 0) {
-                     // Mission Complete!
                      setTimeout(() => {
                          window.closeQuestion();
-                         
-                         // Mark as completed permanently
                          if (!window.state.completedMissionIds) window.state.completedMissionIds = [];
                          if (!window.state.completedMissionIds.includes(mId)) {
                              window.state.completedMissionIds.push(mId);
                              window.saveProgress();
                          }
-                         
                          window.openMissionComplete();
                      }, 800);
                      return;
@@ -1620,14 +1654,12 @@
                         window.showToast(`🔥 連對 10 題！獲得：神秘寶箱 x1 + ${config.oreTypes[rO].name} x5`); window.finishOk(true); 
                     }, 500);
                 } else {
-                    // 如果是怪獸，快速顯示獎勵
                     const delay = (type === 'monster') ? 600 : 1000;
                     setTimeout(() => window.finishOk(false), delay);
                 }
             } else {
                 window.state.streak = 0; fb.innerText = "答錯！受到傷害 -15 體力"; fb.style.color = "#ef4444";
                 window.state.health = Math.max(0, window.state.health - 15); window.updateUI();
-                // 體力耗盡，彈出提示
                 if (window.state.health <= 0) { 
                     window.closeQuestion(); 
                     window.openResetConfirm("體力耗盡！", "您已經沒有體力了。請到背包使用食物，或者重置遊戲。", false); 
@@ -1642,17 +1674,13 @@
         
         window.closeMissionComplete = () => {
              document.getElementById('mission-complete-modal').classList.add('hidden');
-             window.openMissionSelect(); // Force select new mission
+             window.openMissionSelect(); 
         };
 
         window.tryInteract = () => {
             if (!window.state.isAnswering && !window.state.isMining) {
-                
-                // Enforce Mission Selection if finished
                 const mId = window.state.activeMissionId || 'mission_mul_2';
-                const mission = window.globalMissions[mId];
                 
-                // Check if current active mission is in completed list
                 if (window.state.completedMissionIds && window.state.completedMissionIds.includes(mId)) {
                      window.showToast("此任務已完成，請選擇新任務！");
                      window.openMissionSelect();
@@ -1662,7 +1690,23 @@
                 if (!window.state.currentObject) { window.showToast("太遠了！請靠近目標再互動"); return; }
                 const u = window.state.currentObject.userData;
                 
-                // Apply Stamina reduction check
+                if (u.type === 'npc') {
+                    const quote = npcQuotes[Math.floor(Math.random() * npcQuotes.length)];
+                    document.getElementById('npc-text').innerText = quote;
+                    
+                    const ttsIcon = document.getElementById('npc-tts-icon');
+                    if (window.state.autoRead) {
+                        ttsIcon.classList.remove('hidden');
+                        window.speak(quote);
+                    } else {
+                        ttsIcon.classList.add('hidden');
+                    }
+
+                    document.getElementById('modal-container').classList.remove('hidden');
+                    document.getElementById('npc-modal').classList.remove('hidden');
+                    return;
+                }
+
                 const hat = config.hats[window.state.hatIndex];
                 const staminaReduction = (hat.effect ? hat.effect.stamina : 0);
                 
@@ -1685,6 +1729,17 @@
                 if (u.type === 'monster') window.openBattleConfirm(); else { window.state.isMining = true; window.state.miningTime = 0; }
             }
         };
+        
+        window.closeNPCModal = () => {
+            // Stop speaking immediately
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            document.getElementById('npc-modal').classList.add('hidden');
+            if (Array.from(document.querySelectorAll('.modal-mask:not(.hidden)')).length === 0) {
+                 document.getElementById('modal-container').classList.add('hidden');
+            }
+        };
 
         window.openChest = () => {
             if (window.state.inventory.chest <= 0) return; window.state.inventory.chest--;
@@ -1698,15 +1753,11 @@
             document.getElementById('reward-modal').classList.remove('hidden'); window.updateUI(); window.saveProgress();
         };
 
-        // Reset Game Functions
         window.openResetConfirm = (title, desc, isGameOver = false) => {
             const tEl = document.getElementById('reset-title'); const dEl = document.getElementById('reset-desc'); const cBtn = document.getElementById('btn-cancel-reset');
             tEl.innerText = title || "確定重置？"; dEl.innerHTML = desc || "所有等級、金錢、道具將會歸零！<br>體力將回滿，題庫設定會保留。";
-            
-            // Removed Soft Reset Option
             cBtn.innerText = "取消"; 
             cBtn.onclick = window.closeResetConfirm; 
-            
             document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('reset-confirm-modal').classList.remove('hidden');
         };
 
@@ -1732,27 +1783,20 @@
             window.showToast("遊戲已完全重置！");
         };
 
-        window.openSystemMenu = () => {
-            window.toggleModal('system-menu-modal');
-        }
+        window.openSystemMenu = () => { window.toggleModal('system-menu-modal'); }
 
         window.toggleModal = (id) => { const el = document.getElementById(id); const c = document.getElementById('modal-container'); if(el) { c.classList.remove('hidden'); el.classList.toggle('hidden'); if(Array.from(document.querySelectorAll('.modal-mask')).every(m => m.classList.contains('hidden'))) c.classList.add('hidden'); } if(id==='shop-modal') window.changeShopTab('recycle'); if(id==='settings-modal') window.renderTeacherMissionList(); if(id==='backpack-modal') window.updateUI(); };
         window.toggleTabletMode = () => { window.state.isTablet = !window.state.isTablet; document.body.classList.toggle('tablet-mode', window.state.isTablet); window.showToast(window.state.isTablet ? "開啟搖桿介面" : "關閉搖桿介面"); };
         window.onWindowResize = () => { if (!camera || !renderer) return; camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
         window.speak = (t) => { 
-            // 語音修正：將 x 改為 "成" (符合要求)
             let spokenText = t.replace(/x/g, "成").replace(/=/g, "等於");
-            
             const u = new SpeechSynthesisUtterance(spokenText); 
             u.lang = 'zh-TW'; 
             u.rate = window.state.speechRate || 1.0; 
-            
-            // 優先使用使用者選擇的語音
             if (window.state.voiceURI) {
                 const sv = speechSynthesis.getVoices().find(v => v.voiceURI === window.state.voiceURI);
                 if (sv) u.voice = sv;
             }
-            
             window.speechSynthesis.speak(u); 
         }
         window.speakQuestion = () => { if(window.state.currentQuestion) window.speak(window.state.currentQuestion.q); }
@@ -1787,11 +1831,8 @@
                     window.updateUI(); 
                 } else if (!user) { 
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            throw new Error("No token");
-                        }
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                        else throw new Error("No token");
                     } catch (e) {
                         console.log("Custom token failed (expected if using custom firebase config), trying anonymous:", e);
                         await signInAnonymously(auth); 
@@ -1799,7 +1840,6 @@
                 } 
             });
         } else {
-            // Offline Mode Fallback
             window.loadGlobalMissions();
             window.initScene();
             window.updateUI();
@@ -1810,7 +1850,6 @@
         window.addEventListener('keydown', e => { if(e.code === 'KeyK' || e.code === 'k') window.tryInteract(); });
         window.addEventListener('resize', window.onWindowResize);
 
-        // Ensure character selector renders initially
         window.renderCharSelector();
 
     </script>
