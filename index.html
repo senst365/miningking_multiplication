@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>挖礦學習王：乘法特訓版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
+        body { margin: 0; padding: 0; font-family: 'Noto+Sans+TC', sans-serif; overflow: hidden; background: #f0f9ff; touch-action: none; user-select: none; -webkit-user-select: none; width: 100%; height: 100%; position: fixed; }
+        canvas { display: block; width: 100% !important; height: 100% !important; outline: none; }
+        
+        .ui-root { position: absolute; inset: 0; pointer-events: none; z-index: 1000; }
+        .interactive { pointer-events: auto !important; cursor: pointer; touch-action: manipulation; }
+        
+        .tablet-ui, .tablet-ui-flex { display: none !important; }
+        .tablet-mode .tablet-ui { display: grid !important; }
+        .tablet-mode .tablet-ui-flex { display: flex !important; }
+
+        .dpad-container { position: absolute; bottom: 30px; left: 30px; width: 180px; height: 120px; grid-template-columns: repeat(3, 1fr); gap: 8px; z-index: 1100; touch-action: none; transition: all 0.3s ease; }
+        .action-box { position: absolute; bottom: 50px; right: 40px; z-index: 1100; touch-action: none; transition: all 0.3s ease; }
+        
+        .dpad-right .dpad-container { left: auto; right: 30px; }
+        .dpad-right .action-box { right: auto; left: 40px; }
+
+        .arrow-btn { background: rgba(255,255,255,0.95); border: 3px solid #ccc; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 32px; border-radius: 16px; color: #333; box-shadow: 0 4px 0 #999; transition: transform 0.05s; }
+        .arrow-btn:active, .arrow-btn.active-state { transform: translateY(3px); box-shadow: 0 1px 0 #999; background: #fff; }
+        
+        .k-virtual-btn { width: 120px; height: 120px; background: #3b82f6; color: white; font-weight: 900; font-size: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 8px solid rgba(255,255,255,0.8); box-shadow: 0 12px 30px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        .k-virtual-btn:active { transform: scale(0.9); background: #1d4ed8; }
+
+        .side-menu { position: absolute; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 15px; pointer-events: auto; z-index: 1200; }
+        .icon-btn { width: 60px; height: 60px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 30px; border-bottom: 5px solid #ddd; transition: all 0.1s; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .icon-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+        .btn-style-shop { background: #facc15; border-color: #ca8a04; }
+        .btn-style-backpack { background: #60a5fa; border-color: #2563eb; }
+        .btn-style-settings { background: #94a3b8; border-color: #475569; }
+        .btn-style-tablet { background: #ffffff; border-color: #cbd5e1; }
+        .btn-style-tablet.active { background: #3b82f6; color: white; border-color: #1d4ed8; }
+        .btn-style-home { background: #fca5a5; border-color: #ef4444; }
+        .btn-style-switch { background: #e2e8f0; border-color: #64748b; color: #334155; }
+        .btn-style-map { background: #8b5cf6; border-color: #5b21b6; color: white; }
+        .btn-style-reset { background: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+        .btn-style-mission { background: #d1fae5; border-color: #059669; color: #047857; }
+        .btn-style-system { background: #f8fafc; border-color: #64748b; color: #475569; font-weight: 900; font-size: 32px; }
+
+        .status-area { position: absolute; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1050; pointer-events: auto; }
+        .stat-card { background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 16px; border: 2px solid white; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+        .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 8000; display: flex; items-center: center; justify-content: center; padding: 20px; pointer-events: auto; }
+        #reward-modal.modal-mask { z-index: 9000 !important; }
+        #delete-mission-modal.modal-mask { z-index: 9500 !important; }
+        
+        .modal-body { background: white; width: 95%; max-width: 750px; border-radius: 40px; position: relative; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden; border-top: 16px solid #3b82f6; }
+
+        #blocker { position: fixed; inset: 0; background: rgba(255,255,255,0.98); z-index: 6000; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; overflow-y: auto; }
+        
+        .battle-card { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); color: white; border: 4px solid #ef4444; border-radius: 30px; padding: 30px; text-align: center; width: 400px; max-width: 90%; }
+        .char-select-btn { width: 60px; height: 60px; border-radius: 50%; border: 4px solid transparent; transition: all 0.2s; cursor: pointer; }
+        .char-select-btn.selected { border-color: #3b82f6; transform: scale(1.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .bag-section-title { font-size: 1.2rem; font-weight: 900; color: #475569; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+        .shop-sub-title { font-size: 0.9rem; font-weight: 900; color: #64748b; margin: 15px 0 5px 0; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Mission Progress Bar */
+        .mission-progress-container { width: 100%; background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 5px; }
+        .mission-progress-bar { height: 100%; background: #10b981; width: 0%; transition: width 0.5s ease; }
+    </style>
+</head>
+<body class="">
+
+    <!-- 啟動畫面 -->
+    <div id="blocker">
+        <div class="text-center p-8 bg-white rounded-[3rem] shadow-2xl border-[12px] border-blue-500 max-w-xl mx-4 w-full my-10 text-slate-800">
+            <h1 class="text-5xl sm:text-6xl font-black text-blue-600 mb-2 italic tracking-tighter uppercase text-center">MINING KING</h1>
+            <p class="text-xl font-bold text-slate-500 mb-8 italic text-center">挖礦學習王：乘法特訓版</p>
+            
+            <div class="bg-blue-50 p-6 rounded-[2rem] mb-6 border border-blue-100 text-left space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-slate-600 font-black mb-2 ml-2">👤 學生姓名</label>
+                        <input type="text" id="player-name-input" placeholder="名字..." class="w-full p-4 rounded-2xl border-2 border-blue-200 font-bold text-lg focus:outline-none focus:border-blue-500 text-center text-slate-800" onchange="window.updatePlayerName(this.value)">
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 font-black mb-2 ml-2">🔑 密碼</label>
+                        <input type="password" id="player-password-input" placeholder="密碼..." class="w-full p-4 rounded-2xl border-2 border-blue-200 font-bold text-lg focus:outline-none focus:border-blue-500 text-center text-slate-800">
+                    </div>
+                </div>
+
+                <!-- 任務選擇 (Question Bank) -->
+                <div>
+                    <label class="block text-slate-600 font-black mb-2 ml-2">📜 選擇任務 (乘法關卡)</label>
+                    <select id="login-mission-select" class="w-full p-4 rounded-2xl border-2 border-blue-200 font-bold text-lg focus:outline-none focus:border-blue-500 text-slate-800 bg-white">
+                        <!-- 選項會由 JS 自動產生 -->
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-slate-600 font-black mb-2 ml-2">👕 選擇角色顏色</label>
+                    <div class="flex justify-center gap-4" id="char-selector"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 text-slate-800">
+                <button onclick="window.startGame()" class="w-full bg-blue-500 text-white py-4 rounded-[2rem] text-2xl font-black shadow-[0_8px_0_#1d4ed8] active:translate-y-1 active:shadow-none transition-all hover:bg-blue-600">🚀 開始冒險</button>
+                <div class="flex gap-4">
+                     <button onclick="window.toggleModal('student-settings-modal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-[2rem] text-lg font-bold shadow-[0_4px_0_#cbd5e1] active:translate-y-1 active:shadow-none transition-all">⚙️ 學生設定</button>
+                     <button onclick="window.checkTeacherPassword()" class="flex-1 bg-slate-200 text-slate-600 py-3 rounded-[2rem] text-lg font-bold shadow-[0_4px_0_#94a3b8] active:translate-y-1 active:shadow-none transition-all">👨‍🏫 老師專區</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Overlay -->
+    <div class="ui-root">
+        <div class="status-area text-slate-800">
+            <div class="stat-card">
+                <span class="text-xl">👤</span> <span id="ui-player-name" class="font-black text-slate-700 truncate max-w-[100px]">玩家</span>
+            </div>
+            <div class="stat-card flex-col items-start min-w-[180px]">
+                <div class="flex justify-between w-full">
+                    <span class="text-xs font-bold text-slate-500 uppercase">當前任務 Mission</span>
+                </div>
+                <div class="font-black text-slate-800 text-sm truncate w-full" id="ui-mission-name">基礎數學</div>
+                <div class="mission-progress-container">
+                    <div id="ui-mission-bar" class="mission-progress-bar"></div>
+                </div>
+                <div class="text-[10px] text-slate-400 font-bold text-right w-full"><span id="ui-mission-count">0</span>%</div>
+            </div>
+            <div class="stat-card">
+                <span class="text-2xl">💰</span> <span id="stat-money" class="text-2xl font-black text-yellow-600">0</span>
+            </div>
+            
+            <div class="stat-card flex-col items-start w-56 border-blue-200 text-slate-800 hidden sm:flex">
+                <div class="flex justify-between w-full text-blue-600 font-black text-[12px] uppercase">
+                    <span id="level-text">LV.1 (0/5000)</span>
+                </div>
+                <div class="h-3 w-full bg-blue-100 rounded-full mt-1 overflow-hidden">
+                    <div id="exp-fill" class="h-full bg-blue-500 w-0 transition-all"></div>
+                </div>
+                <div class="flex justify-between w-full text-red-600 font-black text-[12px] uppercase mt-2">
+                    <span>❤️ HP 體力</span> <span id="health-val">100</span>
+                </div>
+                <div class="h-3 w-full bg-red-100 rounded-full mt-1 overflow-hidden">
+                    <div id="health-fill" class="h-full bg-red-500 w-0 transition-all"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dpad-container tablet-ui text-slate-800">
+            <div></div>
+            <button class="arrow-btn interactive" onpointerdown="window.setKey('KeyW', true, this)" onpointerup="window.setKey('KeyW', false, this)" onpointerleave="window.setKey('KeyW', false, this)">↑</button>
+            <div></div>
+            <button class="arrow-btn interactive" onpointerdown="window.setKey('KeyA', true, this)" onpointerup="window.setKey('KeyA', false, this)" onpointerleave="window.setKey('KeyA', false, this)">←</button>
+            <button class="arrow-btn interactive" onpointerdown="window.setKey('KeyS', true, this)" onpointerup="window.setKey('KeyS', false, this)" onpointerleave="window.setKey('KeyS', false, this)">↓</button>
+            <button class="arrow-btn interactive" onpointerdown="window.setKey('KeyD', true, this)" onpointerup="window.setKey('KeyD', false, this)" onpointerleave="window.setKey('KeyD', false, this)">→</button>
+        </div>
+
+        <div class="action-box tablet-ui-flex text-slate-800">
+            <button class="k-virtual-btn interactive" onpointerdown="window.tryInteract()">K</button>
+        </div>
+
+        <div class="side-menu text-slate-800">
+            <button onclick="window.switchTool()" class="icon-btn btn-style-switch interactive">🔄</button>
+            <button onclick="window.switchMap()" class="icon-btn btn-style-map interactive">🗺️</button>
+            <button onclick="window.openShop()" class="icon-btn btn-style-shop interactive">🛒</button>
+            <button onclick="window.toggleModal('backpack-modal')" class="icon-btn btn-style-backpack interactive">🎒</button>
+            <button onclick="window.openSystemMenu()" class="icon-btn btn-style-system interactive">☰</button>
+        </div>
+
+        <div id="interaction-hint" class="hidden absolute top-[70%] left-1/2 -translate-x-1/2 bg-blue-600/80 text-white px-6 py-2 rounded-full font-black text-sm border-2 border-white/50 animate-bounce pointer-events-none text-slate-800">
+            按 [K] 互動
+        </div>
+    </div>
+
+    <!-- 彈窗區域 -->
+    <div id="modal-container" class="hidden text-slate-800">
+        
+        <!-- 老師登入彈窗 (新) -->
+        <div id="teacher-login-modal" class="modal-mask hidden">
+            <div class="battle-card bg-slate-800 border-blue-400 w-[400px]">
+                <h2 class="text-3xl font-black text-blue-400 mb-6 italic text-center">老師專區</h2>
+                <p class="text-gray-300 mb-4 font-bold text-center">請輸入密碼 (Password)</p>
+                <input type="password" id="teacher-pwd-input" class="w-full p-3 rounded-xl text-slate-900 font-bold text-center text-xl mb-6" placeholder="密碼...">
+                <div class="flex gap-4">
+                    <button onclick="window.toggleModal('teacher-login-modal')" class="flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white">取消</button>
+                    <button onclick="window.submitTeacherPassword()" class="flex-1 py-3 bg-blue-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#1e3a8a] active:translate-y-1 active:shadow-none">登入</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系統選單彈窗 -->
+        <div id="system-menu-modal" class="modal-mask hidden">
+            <div class="battle-card bg-slate-800 border-blue-400 w-[400px]">
+                <h2 class="text-3xl font-black text-blue-400 mb-6 italic text-center">系統選單</h2>
+                <div class="flex flex-col gap-4">
+                    <button onclick="window.openMissionSelect(); window.toggleModal('system-menu-modal');" class="w-full py-4 bg-emerald-600 rounded-2xl font-black text-white text-xl interactive shadow-[0_4px_0_#065f46] active:translate-y-1 active:shadow-none">
+                        📜 任務佈告欄
+                    </button>
+                    <button onclick="window.toggleModal('student-settings-modal'); window.toggleModal('system-menu-modal');" class="w-full py-4 bg-slate-500 rounded-2xl font-black text-white text-xl interactive shadow-[0_4px_0_#334155] active:translate-y-1 active:shadow-none">
+                        ⚙️ 遊戲設定
+                    </button>
+                    <button onclick="window.goHome()" class="w-full py-4 bg-blue-600 rounded-2xl font-black text-white text-xl interactive shadow-[0_4px_0_#1e3a8a] active:translate-y-1 active:shadow-none">
+                        🏠 回到登入首頁
+                    </button>
+                    <button onclick="window.openResetConfirm()" class="w-full py-4 bg-red-500 rounded-2xl font-black text-white text-xl interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none">
+                        ⚠️ 重置遊戲進度
+                    </button>
+                    <button onclick="window.toggleModal('system-menu-modal')" class="w-full py-3 bg-slate-600 rounded-xl font-bold text-slate-200 text-lg interactive">
+                        繼續遊戲
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 學生設定彈窗 (新) -->
+        <div id="student-settings-modal" class="modal-mask hidden">
+            <div class="modal-body p-8 border-t-slate-500">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-3xl font-black text-slate-600 uppercase italic">遊戲設定 ⚙️</h2>
+                    <button onclick="window.toggleModal('student-settings-modal')" class="text-3xl text-slate-300 hover:text-slate-500">✕</button>
+                </div>
+                <div class="space-y-6">
+                     <!-- 語音設定 -->
+                     <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 space-y-4">
+                        <p class="font-black text-xl text-blue-600 italic">語音設定</p>
+                        <label class="flex items-center gap-4 font-bold text-slate-700 interactive">
+                            <input type="checkbox" class="w-6 h-6 rounded text-blue-600" onchange="window.state.autoRead = this.checked; window.saveProgress()" id="set-auto-read">
+                            題目自動語音報讀
+                        </label>
+                    </div>
+
+                    <!-- 介面設定 -->
+                     <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 space-y-4">
+                        <p class="font-black text-xl text-indigo-600 italic">介面設定</p>
+                        <label class="flex items-center gap-4 font-bold text-slate-700 interactive">
+                            <input type="checkbox" class="w-6 h-6 rounded text-indigo-600" onchange="window.updateDpadPosition(this.checked)" id="set-dpad-right">
+                            將方向鍵置於右側 (適合右手慣用者)
+                        </label>
+                        <button onclick="window.toggleTabletMode()" class="w-full py-3 bg-white border-2 border-indigo-200 rounded-xl font-bold text-indigo-600 interactive active:scale-95">
+                            切換 平板/電腦 模式 (顯示/隱藏按鍵)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 刪除任務確認彈窗 -->
+        <div id="delete-mission-modal" class="modal-mask hidden">
+            <div class="battle-card bg-slate-800 border-red-500 text-slate-800 w-[400px]">
+                <div class="text-6xl mb-4">⚠️</div>
+                <h2 class="text-3xl font-black text-red-500 mb-2 italic text-center">刪除任務？</h2>
+                <p class="text-gray-300 mb-8 font-bold text-center">刪除後將無法復原，<br>所有學生將無法再看到此任務。</p>
+                <div class="flex gap-4">
+                    <button onclick="window.closeDeleteConfirm()" class="flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white">取消</button>
+                    <button onclick="window.confirmDeleteMission()" class="flex-1 py-3 bg-red-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none">確認刪除</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mission-select-modal" class="modal-mask hidden">
+            <div class="modal-body p-8 border-t-[#10b981]">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black text-emerald-600 italic text-slate-800">📜 任務佈告欄</h2>
+                    <button onclick="window.toggleModal('mission-select-modal')" class="text-4xl text-slate-300">✕</button>
+                </div>
+                <p class="text-slate-500 mb-4 font-bold">請選擇要執行的任務。已完成的任務無法再次挑戰。</p>
+                <div id="mission-list-ui" class="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar p-2"></div>
+            </div>
+        </div>
+
+        <div id="mission-complete-modal" class="modal-mask hidden">
+            <div class="battle-card bg-slate-900 border-yellow-400 w-[500px]">
+                <div class="text-6xl mb-4 animate-bounce">🏆</div>
+                <h2 class="text-4xl font-black text-yellow-400 mb-2 italic text-center">任務完成！</h2>
+                <p class="text-white mb-6 font-bold text-center text-lg">恭喜！你已經完成了本任務的所有挑戰！<br>獲得額外獎勵：<span class="text-yellow-400">$5000</span> + <span class="text-blue-400">💎x2</span></p>
+                <div class="bg-slate-800 p-4 rounded-xl mb-6 text-sm text-slate-400">
+                    <p>此任務已標記為完成。請選擇新的任務繼續。</p>
+                </div>
+                <button onclick="window.closeMissionComplete()" class="w-full py-4 bg-yellow-500 rounded-2xl font-black text-slate-900 text-xl interactive shadow-[0_6px_0_#b45309] active:translate-y-1 active:shadow-none">前往選擇新任務 ➔</button>
+            </div>
+        </div>
+
+        <div id="battle-confirm-modal" class="modal-mask hidden">
+            <div class="battle-card text-slate-800">
+                <div class="text-6xl mb-4">👾</div>
+                <h2 class="text-3xl font-black text-red-500 mb-2 italic text-center">遭遇強敵！</h2>
+                <p class="text-gray-300 mb-8 font-bold text-center">前方發現暴怒守衛，是否進行戰鬥？</p>
+                <div class="flex gap-4">
+                    <button onclick="window.closeBattleConfirm()" class="flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white">逃跑</button>
+                    <button onclick="window.startBattle()" class="flex-1 py-3 bg-red-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none text-slate-800">戰鬥！</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="reset-confirm-modal" class="modal-mask hidden">
+            <div class="battle-card bg-slate-800 border-red-500 text-slate-800">
+                <div class="text-6xl mb-4">⚠️</div>
+                <h2 class="text-3xl font-black text-red-500 mb-2 italic text-center" id="reset-title">確定重置？</h2>
+                <p class="text-gray-300 mb-8 font-bold text-center" id="reset-desc">所有等級、金錢、道具將會歸零！<br>體力將回滿，題庫設定會保留。</p>
+                <div class="flex gap-4">
+                    <button onclick="window.closeResetConfirm()" id="btn-cancel-reset" class="flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white">取消</button>
+                    <button onclick="window.resetGame()" class="flex-1 py-3 bg-red-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none">確認重置</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="reward-modal" class="modal-mask hidden">
+            <div class="modal-body p-10 border-t-[#8b5cf6] text-center shadow-2xl text-slate-800">
+                <h2 class="text-3xl font-black text-purple-600 mb-6 italic text-center text-slate-800">✨ 獲得獎勵 ✨</h2>
+                <div id="reward-list" class="grid grid-cols-1 gap-4 mb-8 text-left max-h-60 overflow-y-auto custom-scrollbar p-2 text-slate-800"></div>
+                <button onclick="document.getElementById('reward-modal').classList.add('hidden')" class="w-full bg-purple-600 text-white py-4 rounded-2xl text-xl font-black shadow-lg interactive active:scale-95 transition-all">收下獎勵</button>
+            </div>
+        </div>
+
+        <div id="question-modal" class="modal-mask hidden">
+            <div class="modal-body p-10 text-slate-800">
+                <button onclick="window.closeQuestion()" class="absolute top-6 right-8 text-5xl text-slate-300">✕</button>
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex flex-col items-start">
+                        <h2 id="q-title" class="text-blue-600 font-black text-2xl tracking-widest italic uppercase">挖礦中</h2>
+                        <span id="q-diff-badge" class="text-xs font-bold text-white px-2 py-1 rounded bg-slate-400 mt-1">NORMAL</span>
+                    </div>
+                    <button id="tts-btn" onclick="window.speakQuestion()" class="bg-blue-50 p-4 rounded-full text-2xl interactive hover:bg-blue-100 transition-all text-slate-800">🔊</button>
+                </div>
+                <p id="q-text" class="text-4xl font-black text-slate-800 mb-10 leading-tight text-center italic text-slate-800"></p>
+                <div id="q-options" class="grid grid-cols-1 gap-4 overflow-y-auto custom-scrollbar p-2 text-slate-800"></div>
+                <div id="q-feedback" class="mt-8 text-center text-2xl font-black min-h-[1.5em] text-slate-800"></div>
+            </div>
+        </div>
+
+        <div id="shop-modal" class="modal-mask hidden text-slate-800">
+            <div class="modal-body p-10 border-t-[#ca8a04] text-slate-800">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black text-yellow-600 italic text-slate-800">採礦中心商店 🛒</h2>
+                    <div class="flex items-center gap-6">
+                        <span class="font-black text-yellow-600 text-2xl text-slate-800">持有: $<span id="shop-money">0</span></span>
+                        <button onclick="window.toggleModal('shop-modal')" class="text-4xl text-slate-300">✕</button>
+                    </div>
+                </div>
+                <div class="flex gap-2 mb-6">
+                    <button onclick="window.changeShopTab('recycle')" id="tab-recycle" class="shop-tab-btn flex-1 py-4 bg-slate-100 rounded-xl font-black border-b-8 border-yellow-400 interactive text-slate-800">販賣市場</button>
+                    <button onclick="window.changeShopTab('tools')" id="tab-tools" class="shop-tab-btn flex-1 py-4 bg-slate-100 rounded-xl font-black border-b-8 border-blue-400 interactive text-slate-800">工具升級</button>
+                    <button onclick="window.changeShopTab('avatar')" id="tab-avatar" class="shop-tab-btn flex-1 py-4 bg-slate-100 rounded-xl font-black border-b-8 border-purple-400 interactive text-slate-800">角色裝扮</button>
+                    <button onclick="window.changeShopTab('supplies')" id="tab-supplies" class="shop-tab-btn flex-1 py-4 bg-slate-100 rounded-xl font-black border-b-8 border-green-400 interactive text-slate-800">冒險補給</button>
+                </div>
+                <div id="shop-content" class="flex-1 overflow-y-auto pr-2 custom-scrollbar text-slate-800"></div>
+            </div>
+        </div>
+
+        <div id="backpack-modal" class="modal-mask hidden text-slate-800">
+            <div class="modal-body p-10 border-t-[#2563eb] text-slate-800">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-black text-blue-500 italic uppercase text-center text-slate-800">我的背包資產 🎒</h2>
+                    <button onclick="window.toggleModal('backpack-modal')" class="text-3xl text-slate-300 hover:text-slate-600 text-slate-800">✕</button>
+                </div>
+                <div id="backpack-content" class="flex-1 overflow-y-auto pr-4 custom-scrollbar p-2 text-slate-800"></div>
+            </div>
+        </div>
+
+        <div id="settings-modal" class="modal-mask hidden text-slate-800">
+            <div class="modal-body p-10 border-t-slate-500 text-slate-800">
+                <div class="flex justify-between items-center mb-8 text-slate-800">
+                    <h2 class="text-3xl font-black text-slate-600 uppercase italic text-slate-800">老師設定區 ⚙️</h2>
+                    <button onclick="window.toggleModal('settings-modal')" class="text-3xl text-slate-300 hover:text-slate-500 text-slate-800">✕</button>
+                </div>
+                <div class="flex-1 overflow-y-auto pr-4 custom-scrollbar space-y-10 text-slate-700 text-slate-800">
+                    
+                    <div class="bg-indigo-50 p-8 rounded-[2.5rem] border border-indigo-100 space-y-6 text-slate-800">
+                        <div class="flex justify-between items-center">
+                            <p class="font-black text-xl text-indigo-600 italic text-slate-800">新增任務 (題庫)</p>
+                        </div>
+                        <input type="text" id="new-mission-title" placeholder="請輸入任務名稱 (例如: 期中複習)..." class="w-full p-4 rounded-xl border-2 text-slate-800 font-bold">
+                        
+                        <div class="flex gap-4 text-slate-800">
+                            <button onclick="window.downloadExampleCSV()" class="flex-1 bg-white p-3 rounded-xl font-bold border-2 text-slate-500 interactive shadow-sm text-slate-800">📥 下載範例</button>
+                            <label class="flex-1 bg-indigo-500 p-3 rounded-xl font-bold text-white text-center cursor-pointer interactive shadow-md text-slate-800">
+                                📤 上傳 CSV
+                                <input type="file" id="csv-upload" class="hidden text-slate-800" accept=".csv" onchange="window.handleCSVUpload(event)">
+                            </label>
+                        </div>
+                        <textarea id="import-area" placeholder="CSV 內容預覽..." class="w-full h-24 p-4 rounded-2xl border-2 text-sm font-mono bg-white outline-none focus:border-blue-500 interactive text-slate-800"></textarea>
+                        <button onclick="window.uploadMission()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl text-xl interactive shadow-lg text-slate-800">確認發布任務</button>
+                    </div>
+
+                    <div class="bg-slate-100 p-8 rounded-[2.5rem] border border-slate-200 space-y-4">
+                        <p class="font-black text-xl text-slate-600 italic">已發布任務列表</p>
+                        <div id="teacher-mission-list" class="space-y-2">
+                            <!-- 老師任務列表 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, deleteField, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+        // --- 0. 宣告全域 3D 物件 (解決 ReferenceError) ---
+        let scene = null, camera = null, renderer = null, clock = null;
+        let playerGroup = null, visualGroup = null, pickaxeMesh = null, hatMesh = null, bodyMesh = null;
+        let fishingRodMesh = null, fishingNetMesh = null, boatMesh = null;
+        let leftLeg = null, rightLeg = null, leftArm = null, rightArm = null;
+        let objects = [], collidables = [], bridges = [];
+        let isInitialized = false;
+        let playerLight = null;
+
+        // --- 1. Firebase 初始化 ---
+        // 注意：如果您將此檔案上傳至 GitHub，請將下方的 config 替換為您自己的 Firebase 專案設定
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            // 在此填入您的 Firebase Config
+            // apiKey: "...",
+            // authDomain: "...",
+            // projectId: "...",
+        };
+        
+        let fbApp, auth, db;
+        try {
+            fbApp = initializeApp(firebaseConfig);
+            auth = getAuth(fbApp);
+            db = getFirestore(fbApp);
+        } catch (e) {
+            console.warn("Firebase 初始化失敗，可能缺少設定檔。單機功能仍可運作。", e);
+        }
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'dream-miner-math-v1';
+
+        window.fb_auth = auth;
+        window.fb_db = db;
+
+        // --- 2. 狀態與配置 ---
+        window.state = {
+            // 學生狀態
+            userId: null, money: 0, level: 1, exp: 0, health: 100, streak: 0, playerName: "玩家", password: "",
+            inventory: { 'stone': 0, 'iron': 0, 'gold': 0, 'ruby': 0, 'diamond': 0, 'chest': 0, 'pearl': 0, 'chocolate': 0, 'meal': 0, 'energy_drink': 0, 'steak': 0, 'boat': 0, 'fish': 0, 'crab': 0, 'lobster': 0, 'shark': 0, 'headlamp': 0 },
+            toolIndex: 0, fishingToolIndex: 0, hatIndex: 0, clothesIndex: 0, ownedHats: [0], 
+            
+            // 任務與設定
+            activeMissionId: 'mission_mul_2', // 預設 2 的乘法
+            completedQuestions: [], 
+            missionProgress: 0,
+            
+            autoRead: false, voiceURI: '', speechRate: 1.0, isTablet: false, isDpadOnRight: false,
+            
+            // 遊戲 Runtime 狀態
+            isMining: false, isAnswering: false, miningTime: 0, currentObject: null,
+            activeTool: 'pickaxe', currentMap: 'island',
+            pendingDeleteId: null // 待刪除的任務 ID
+        };
+        
+        // --- 自動生成乘法任務 (2-10) ---
+        function generateMathMissions() {
+            const missions = {};
+            
+            // 產生 2 到 10 的乘法表任務
+            for (let n = 2; n <= 10; n++) {
+                const questions = [];
+                
+                // 1. 10題 填充題 (Short Answer)
+                for (let i = 1; i <= 10; i++) {
+                    questions.push({
+                        type: 'sa',
+                        q: `${n} x ${i} = ?`,
+                        a: [],
+                        correct: `${n * i}`,
+                        difficulty: 'normal'
+                    });
+                }
+                
+                // 2. 10題 是非題 (True/False)
+                for (let i = 1; i <= 10; i++) {
+                    const isCorrect = Math.random() > 0.5;
+                    const result = n * i;
+                    // 若要生成錯誤答案，隨機加減 n 或 1~5，並確保不是負數
+                    let shownResult = result;
+                    if (!isCorrect) {
+                        const offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 5) + 1);
+                        shownResult = result + offset;
+                        if (shownResult < 0) shownResult = 0;
+                        if (shownResult === result) shownResult = result + 1; // 確保一定錯誤
+                    }
+                    
+                    questions.push({
+                        type: 'tf',
+                        q: `${n} x ${i} = ${shownResult}`,
+                        a: ["是", "否"],
+                        correct: isCorrect ? 0 : 1, // 0是"是", 1是"否"
+                        difficulty: 'normal'
+                    });
+                }
+
+                // 3. 10題 選擇題 (Multiple Choice)
+                for (let i = 1; i <= 10; i++) {
+                    const result = n * i;
+                    const answers = [result]; // 正確答案
+                    
+                    // 生成 3 個錯誤選項
+                    while (answers.length < 4) {
+                        const offset = (Math.floor(Math.random() * 10) + 1) * (Math.random() > 0.5 ? 1 : -1);
+                        const wrong = result + offset;
+                        if (wrong > 0 && !answers.includes(wrong)) {
+                            answers.push(wrong);
+                        }
+                    }
+                    
+                    // 洗牌選項
+                    const shuffled = answers.sort(() => Math.random() - 0.5);
+                    const correctIdx = shuffled.indexOf(result);
+                    
+                    questions.push({
+                        type: 'mc',
+                        q: `${n} x ${i} = ?`,
+                        a: shuffled.map(String),
+                        correct: correctIdx,
+                        difficulty: 'normal'
+                    });
+                }
+
+                missions[`mission_mul_${n}`] = {
+                    title: `🧮 ${n} 的乘法挑戰 (30題)`,
+                    questions: questions
+                };
+            }
+            return missions;
+        }
+
+        // 初始化全球任務
+        window.globalMissions = generateMathMissions();
+        
+        window.keys = {};
+
+        const config = {
+            pScale: 4.5, playerScale: 7.5, monsterScale: 7.0, playerHitbox: 5.0, 
+            moveSpeed: 0.8, rotationSpeed: 0.25, riverRange: { min: -1600, max: -800 },
+            maps: { island: { name: '陽光島嶼', minLevel: 1 }, cave: { name: '幽暗地底', minLevel: 10 } },
+            oreTypes: {
+                'stone':  { name: '普通石頭', color: 0x94a3b8, value: 20, icon: '🪨', exp: 20 },
+                'iron':   { name: '閃亮鐵礦', color: 0xcbd5e1, value: 100, icon: '⚙️', exp: 60 },
+                'gold':   { name: '純淨金礦', color: 0xfacc15, value: 500, icon: '🪙', exp: 200 },
+                'ruby':   { name: '紅寶石',   color: 0xef4444, value: 2000, icon: '🛑', exp: 500 },
+                'diamond':{ name: '傳說鑽石', color: 0x22d3ee, value: 8000,icon: '💎', exp: 1200 },
+                'pearl':  { name: '深海珍珠', color: 0xffffff, value: 15000,icon: '🔮', exp: 3000 },
+                'chest':  { name: '神秘寶箱', color: 0x8b5cf6, value: 30000,icon: '🎁', exp: 6000 },
+                'fish':   { name: '新鮮漁獲', color: 0x0ea5e9, value: 300, icon: '🐟', exp: 150 },
+                'crab':   { name: '帝王蟹',   color: 0xff4500, value: 2000, icon: '🦀', exp: 400 },
+                'lobster':{ name: '大龍蝦',   color: 0xff0000, value: 3500, icon: '🦞', exp: 600 },
+                'shark':  { name: '傳說鯊魚', color: 0x708090, value: 8000, icon: '🦈', exp: 1500 }
+            },
+            miningTools: [{ name: "木製十字鎬", cost: 0, color: 0x8b4513 }, { name: "鐵製十字鎬", cost: 35000, color: 0xced4da }, { name: "黃金十字鎬", cost: 150000, color: 0xffd700 }, { name: "鑽石十字鎬", cost: 500000, color: 0x00ffff }],
+            fishingTools: [{ name: "空手捕魚", cost: 0, icon: '🖐️' }, { name: "魚竿", cost: 1500, icon: '🎣' }, { name: "漁網", cost: 12000, icon: '🕸️' }],
+            clothesColors: [{ name: "經典藍", color: 0x3b82f6 }, { name: "狂暴紅", color: 0xef4444 }, { name: "暗影黑", color: 0x111111 }, { name: "森林綠", color: 0x16a34a }, { name: "閃亮黃", color: 0xeab308 }],
+            hats: [
+                { name: "不戴帽子", cost: 0, color: null, effect: { speed: 0, stamina: 0 }, desc: "無效果" },
+                { name: "採礦安全帽", cost: 5000, color: 0xfacc15, effect: { speed: 0, stamina: -2 }, desc: "體力消耗 -2" },
+                { name: "傳奇牛仔帽", cost: 20000, color: 0x78350f, effect: { speed: 0.2, stamina: 0 }, desc: "速度 +20%" },
+                { name: "至尊王冠", cost: 300000, color: 0xfde047, effect: { speed: 0.3, stamina: -5 }, desc: "速度+30%, 體力-5" }
+            ],
+            supplies: {
+                'chocolate': { name: '巧克力棒', heal: 20, cost: 200, icon: '🍫' },
+                'energy_drink': { name: '提神飲料', heal: 40, cost: 500, icon: '🥤' },
+                'boat': { name: '渡河小船', heal: 0, cost: 5000, icon: '🛶' },
+                'meal': { name: '黃金全餐', heal: 80, cost: 1200, icon: '🍱' },
+                'steak': { name: '厚切牛排', heal: 100, cost: 2500, icon: '🥩' }
+            },
+            specialItems: { 'headlamp': { name: '高流明頭燈', cost: 15000, icon: '🔦' } },
+            costs: { mining: 10, fishing: 10, monster: 30, field: 5 }
+        };
+
+        // --- 3. 核心功能定義 ---
+
+        // 檢查老師專區密碼 (改用彈窗)
+        window.checkTeacherPassword = function() {
+            document.getElementById('teacher-pwd-input').value = ''; // Clear input
+            window.toggleModal('teacher-login-modal');
+        };
+
+        window.submitTeacherPassword = function() {
+            const pwd = document.getElementById('teacher-pwd-input').value;
+            if (pwd === 'tset') {
+                window.toggleModal('teacher-login-modal');
+                window.toggleModal('settings-modal');
+                // 如果已經在系統選單內，要關閉它
+                document.getElementById('system-menu-modal').classList.add('hidden');
+            } else {
+                window.showToast("❌ 密碼錯誤！");
+            }
+        };
+
+        // 讀取全球任務 (包含老師上傳的和預設的)
+        async function loadGlobalMissions() {
+            try {
+                if (!db) return; // 如果沒有資料庫連線，就只使用本地生成的
+                const snap = await getDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'global_missions', 'master'));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    // 合併內建乘法任務與老師上傳的任務
+                    // 優先使用內建任務作為基礎
+                    const defaults = generateMathMissions();
+                    window.globalMissions = { ...defaults, ...data.missions };
+                }
+                updateMissionDropdowns();
+                renderTeacherMissionList();
+            } catch(e) { console.error("Error loading missions:", e); }
+        }
+
+        // 儲存全球任務 (老師上傳)
+        async function uploadMission() {
+            if (!db) { alert("無法連接資料庫，無法上傳任務。(如果是 GitHub Pages 版，請確認 Firebase Config)"); return; }
+            const title = document.getElementById('new-mission-title').value.trim();
+            const raw = document.getElementById('import-area').value.trim();
+            if(!title) { window.showToast("請輸入任務標題"); return; }
+            if(!raw) { window.showToast("請輸入CSV內容"); return; }
+
+            const questions = [];
+            const lines = raw.split(/\r?\n/);
+            
+            lines.forEach(l => {
+                const p = l.split(',').map(s => s.trim());
+                if (p.length < 3) return;
+                
+                const type = p[0].toLowerCase();
+                const diff = (p[p.length-1] && p[p.length-1].trim() === 'hard') ? 'hard' : 'normal';
+                
+                let rawCorrect = parseInt(p[6]);
+                if (isNaN(rawCorrect) || rawCorrect < 1 || rawCorrect > 4) rawCorrect = 1;
+                const correctIdx = rawCorrect - 1; 
+
+                if (type === 'mc' && p.length >= 7) {
+                    questions.push({ type: 'mc', q: p[1], a: [p[2], p[3], p[4], p[5]], correct: correctIdx, difficulty: diff });
+                } else if (type === 'tf') {
+                    questions.push({ type: 'tf', q: p[1], a: [p[2], p[3]], correct: correctIdx, difficulty: diff });
+                } else if (type === 'sa') {
+                    questions.push({ type: 'sa', q: p[1], a: [], correct: p[2], difficulty: diff });
+                }
+            });
+
+            if(questions.length === 0) { window.showToast("無效的題目格式或內容為空"); return; }
+
+            const missionId = 'mission_custom_' + Date.now();
+            const newMission = { title, questions };
+            
+            window.globalMissions[missionId] = newMission;
+            
+            try {
+                // Save to Firestore (Merging with existing)
+                await setDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'global_missions', 'master'), {
+                    missions: { [missionId]: newMission }
+                }, { merge: true });
+                
+                window.showToast("任務發布成功！");
+                document.getElementById('new-mission-title').value = '';
+                document.getElementById('import-area').value = '';
+                updateMissionDropdowns();
+                renderTeacherMissionList();
+            } catch(e) { console.error(e); window.showToast("上傳失敗，請重試"); }
+        }
+
+        // --- 刪除任務相關 (新版: 使用彈窗確認) ---
+        window.openDeleteConfirm = function(id) {
+            if(id.startsWith('mission_mul_')) { window.showToast("內建乘法任務無法刪除"); return; }
+            window.state.pendingDeleteId = id;
+            // 顯示確認彈窗
+            window.toggleModal('delete-mission-modal');
+        }
+
+        window.closeDeleteConfirm = function() {
+            window.state.pendingDeleteId = null;
+            // 關閉確認彈窗 (注意：這裡不應直接 toggleModal，因為可能狀態不同步，建議用 add('hidden'))
+            document.getElementById('delete-mission-modal').classList.add('hidden');
+            // 如果沒有其他彈窗開啟，隱藏主容器
+            if(document.querySelectorAll('.modal-mask:not(.hidden)').length === 0) {
+                document.getElementById('modal-container').classList.add('hidden');
+            }
+        }
+
+        window.confirmDeleteMission = async function() {
+            const id = window.state.pendingDeleteId;
+            if (!id) return;
+
+            window.closeDeleteConfirm(); // 先關閉彈窗
+
+            if (window.state.activeMissionId === id) {
+                window.state.activeMissionId = 'mission_mul_2'; // 回到基礎乘法
+                window.state.completedQuestions = [];
+                window.state.missionProgress = 0;
+                window.updateUI(); 
+                window.showToast("當前任務已刪除，自動切換回預設任務");
+            }
+
+            // 更新本地資料
+            delete window.globalMissions[id];
+            renderTeacherMissionList();
+            updateMissionDropdowns();
+
+            // 更新雲端資料
+            if (db) {
+                try {
+                    const docRef = doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'global_missions', 'master');
+                    await updateDoc(docRef, {
+                        [`missions.${id}`]: deleteField()
+                    });
+                    window.showToast("✅ 任務已從伺服器刪除");
+                } catch(e) { 
+                    console.error("Delete failed:", e); 
+                    window.showToast("❌ 刪除失敗：無法連接伺服器");
+                }
+            }
+        }
+
+        window.openSystemMenu = () => {
+            window.toggleModal('system-menu-modal');
+        }
+
+        function updateMissionDropdowns() {
+            const sels = [document.getElementById('login-mission-select')];
+            const missionListUI = document.getElementById('mission-list-ui');
+            
+            if(missionListUI) missionListUI.innerHTML = '';
+
+            // 排序任務，讓乘法 2-9 排在前面
+            const sortedKeys = Object.keys(window.globalMissions).sort((a, b) => {
+                if (a.startsWith('mission_mul_') && b.startsWith('mission_mul_')) {
+                    return parseInt(a.split('_')[2]) - parseInt(b.split('_')[2]);
+                }
+                return 0;
+            });
+
+            const optsHTML = sortedKeys.map(id => {
+                const m = window.globalMissions[id];
+                return `<option value="${id}">${m.title}</option>`;
+            }).join('');
+            
+            sels.forEach(s => { if(s) s.innerHTML = optsHTML; });
+
+            if(missionListUI) {
+                sortedKeys.forEach(id => {
+                     const m = window.globalMissions[id];
+                     const isAct = window.state.activeMissionId === id;
+                     const isCompleted = window.state.completedMissionIds && window.state.completedMissionIds.includes(id);
+                     
+                     let btnClass = `w-full text-left p-4 rounded-xl border-2 font-bold mb-2 transition-all `;
+                     if (isAct) btnClass += 'bg-emerald-100 border-emerald-500 text-emerald-800';
+                     else if (isCompleted) btnClass += 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed';
+                     else btnClass += 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100';
+
+                     const btn = document.createElement('button');
+                     btn.className = btnClass;
+                     btn.disabled = isCompleted;
+                     btn.innerHTML = `<div class="flex justify-between items-center"><span>${isCompleted ? '🏆 ' : ''}${m.title}</span> <span class="text-xs bg-white px-2 py-1 rounded border">${m.questions.length}題</span></div>`;
+                     if (!isCompleted) {
+                         btn.onclick = () => { window.switchMission(id); window.toggleModal('mission-select-modal'); };
+                     }
+                     missionListUI.appendChild(btn);
+                });
+            }
+        }
+
+        function renderTeacherMissionList() {
+            const list = document.getElementById('teacher-mission-list'); if(!list) return;
+            list.innerHTML = '';
+            Object.entries(window.globalMissions).forEach(([id, m]) => {
+                // 不顯示內建的乘法任務在管理列表，避免誤刪
+                if(id.startsWith('mission_mul_')) return;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <div>
+                            <div class="font-black text-slate-700">${m.title}</div>
+                            <div class="text-xs text-slate-400">${m.questions.length} 題</div>
+                        </div>
+                        <button id="btn-del-${id}" onclick="window.openDeleteConfirm('${id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg font-bold">刪除</button>
+                    </div>
+                `;
+            });
+        }
+
+        // 存檔 (學生狀態)
+        async function saveProgress() {
+            if (!window.state || !window.state.playerName) return;
+            // 如果沒有 DB，暫時無法雲端存檔，可以考慮加 localStorage
+            if (!db) return;
+
+            const safeName = window.state.playerName.trim();
+            if(!safeName) return;
+            try {
+                await setDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'student_saves', safeName), {
+                    playerName: window.state.playerName, 
+                    password: window.state.password,
+                    money: window.state.money, level: window.state.level, exp: window.state.exp, health: window.state.health,
+                    inventory: window.state.inventory, toolIndex: window.state.toolIndex, fishingToolIndex: window.state.fishingToolIndex, hatIndex: window.state.hatIndex, clothesIndex: window.state.clothesIndex,
+                    ownedHats: window.state.ownedHats, autoRead: window.state.autoRead, voiceURI: window.state.voiceURI, speechRate: window.state.speechRate, streak: window.state.streak,
+                    isDpadOnRight: window.state.isDpadOnRight, activeTool: window.state.activeTool, currentMap: window.state.currentMap,
+                    activeMissionId: window.state.activeMissionId || 'mission_mul_2',
+                    completedQuestions: window.state.completedQuestions || [],
+                    completedMissionIds: window.state.completedMissionIds || []
+                });
+            } catch(e) { console.error("Save error:", e); }
+        }
+
+        // 讀檔 (學生狀態)
+        async function loadStudentData(name, password) {
+            if(!name) return false;
+            // 如果沒有 DB，直接建立新角色
+            if (!db) {
+                window.state.playerName = name;
+                window.state.password = password;
+                window.showToast(`歡迎, ${name}! (離線模式)`);
+                window.renderCharSelector();
+                return true;
+            }
+
+            const safeName = name.trim();
+            try {
+                const snap = await getDoc(doc(window.fb_db, 'artifacts', appId, 'public', 'data', 'student_saves', safeName));
+                if (snap.exists()) {
+                    const data = snap.data(); 
+                    if (data.password && data.password !== password) { window.showToast("密碼錯誤！"); return false; }
+                    
+                    const mergedInventory = { ...window.state.inventory, ...data.inventory };
+                    Object.assign(window.state, data);
+                    window.state.password = password; 
+                    window.state.inventory = mergedInventory;
+                    // Restore mission progress
+                    window.state.activeMissionId = data.activeMissionId || 'mission_mul_2';
+                    window.state.completedQuestions = data.completedQuestions || [];
+                    window.state.completedMissionIds = data.completedMissionIds || [];
+                    
+                    window.updatePlayerName(data.playerName);
+                    if(data.clothesIndex !== undefined) window.selectCharColor(data.clothesIndex);
+                    window.updateHandedness(); window.updateUI(); 
+                    
+                    const setAuto = document.getElementById('set-auto-read'); if (setAuto) setAuto.checked = window.state.autoRead;
+                    const setDpad = document.getElementById('set-dpad-right'); if (setDpad) setDpad.checked = window.state.isDpadOnRight;
+
+                    if(hatMesh) {
+                        const hInfo = config.hats[window.state.hatIndex];
+                        hatMesh.visible = (window.state.hatIndex > 0);
+                        if(hatMesh.visible && hInfo.color) hatMesh.material.color.setHex(hInfo.color);
+                    }
+                    window.updateToolVisuals();
+                    window.showToast(`歡迎回來, ${safeName}!`);
+                } else {
+                    window.state.playerName = safeName;
+                    window.state.password = password; 
+                    window.showToast(`歡迎新同學, ${safeName}!`);
+                }
+                window.renderCharSelector();
+                return true;
+            } catch(e) { console.error("Load error:", e); return false; }
+        }
+
+        // --- Window 掛載與 UI ---
+
+        window.loadGlobalMissions = loadGlobalMissions;
+        window.uploadMission = uploadMission;
+        // window.deleteMission is defined above
+        window.updateMissionDropdowns = updateMissionDropdowns;
+        window.renderTeacherMissionList = renderTeacherMissionList;
+        window.saveProgress = saveProgress;
+        window.loadStudentData = loadStudentData;
+
+        window.initTTS = function() {
+            const vSelect = document.getElementById('voice-select');
+            const pop = () => { const voices = speechSynthesis.getVoices(); if (vSelect) vSelect.innerHTML = voices.map(v => `<option value="${v.voiceURI}" ${v.voiceURI === window.state.voiceURI ? 'selected' : ''}>${v.name} (${v.lang})</option>`).join(''); };
+            pop(); if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = pop;
+        };
+
+        window.showToast = function(m) { 
+            const t = document.createElement('div'); 
+            t.className = "absolute bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-3 rounded-full z-[10000] font-black shadow-2xl text-center text-sm"; 
+            t.innerText = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); 
+        };
+
+        window.updatePlayerName = function(name) {
+            window.state.playerName = name || "玩家";
+            const el = document.getElementById('ui-player-name');
+            if(el) el.innerText = window.state.playerName;
+        };
+
+        window.updateHandedness = function() {
+            if (window.state.isDpadOnRight) document.body.classList.add('dpad-right');
+            else document.body.classList.remove('dpad-right');
+            const setInput = document.getElementById('set-dpad-right');
+            if(setInput) setInput.checked = window.state.isDpadOnRight;
+        };
+
+        window.selectCharColor = function(idx) {
+            window.state.clothesIndex = idx;
+            document.querySelectorAll('.char-select-btn').forEach((b, i) => {
+                if (i === idx) b.classList.add('selected'); else b.classList.remove('selected');
+            });
+            if (bodyMesh) bodyMesh.material.color.setHex(config.clothesColors[idx].color);
+        };
+
+        // FIXED: Added missing renderCharSelector function
+        window.renderCharSelector = function() {
+            const container = document.getElementById('char-selector'); if(!container) return; container.innerHTML = '';
+            config.clothesColors.forEach((c, i) => {
+                const btn = document.createElement('button');
+                btn.className = `char-select-btn ${i === window.state.clothesIndex ? 'selected' : ''}`;
+                btn.style.backgroundColor = '#' + c.color.toString(16).padStart(6, '0');
+                btn.onclick = () => { window.state.clothesIndex = i; window.selectCharColor(i); };
+                container.appendChild(btn);
+            });
+        };
+        
+        // 學生選擇任務 (登入時或遊戲中)
+        window.switchMission = function(id) {
+             if (!window.globalMissions[id]) id = 'mission_mul_2';
+             window.state.activeMissionId = id;
+             window.state.completedQuestions = []; // 重置該次任務進度
+             window.state.missionProgress = 0;
+             window.updateUI();
+             window.showToast(`已切換任務：${window.globalMissions[id].title}`);
+        };
+
+        window.updateUI = function() {
+            const elMoney = document.getElementById('stat-money'); if(elMoney) elMoney.innerText = window.state.money;
+            const elShopMoney = document.getElementById('shop-money'); if(elShopMoney) elShopMoney.innerText = window.state.money;
+            const elHealthVal = document.getElementById('health-val'); if(elHealthVal) elHealthVal.innerText = window.state.health;
+            const elHealthFill = document.getElementById('health-fill'); if(elHealthFill) elHealthFill.style.width = window.state.health + '%';
+            const elLevelVal = document.getElementById('level-val'); if(elLevelVal) elLevelVal.innerText = window.state.level;
+            const elExpFill = document.getElementById('exp-fill'); if(elExpFill) elExpFill.style.width = Math.min(100, (window.state.exp / (window.state.level * 5000)) * 100) + '%';
+            if(pickaxeMesh) pickaxeMesh.material.color.setHex(config.miningTools[window.state.toolIndex].color);
+            if(bodyMesh) bodyMesh.material.color.setHex(config.clothesColors[window.state.clothesIndex].color);
+            const h = config.hats[window.state.hatIndex]; if(hatMesh) { if (!h.color) hatMesh.visible = false; else { hatMesh.visible = true; hatMesh.material.color.setHex(h.color); } }
+            
+            // Mission UI
+            const activeM = window.globalMissions[window.state.activeMissionId] || window.globalMissions['mission_mul_2'];
+            const uiMName = document.getElementById('ui-mission-name'); if(uiMName) uiMName.innerText = activeM.title;
+            const totalQ = activeM.questions.length;
+            const doneQ = window.state.completedQuestions.length;
+            const pct = totalQ > 0 ? Math.floor((doneQ / totalQ) * 100) : 100;
+            const uiMBar = document.getElementById('ui-mission-bar'); if(uiMBar) uiMBar.style.width = pct + '%';
+            const uiMCount = document.getElementById('ui-mission-count'); if(uiMCount) uiMCount.innerText = pct;
+
+            const toolEl = document.getElementById('ui-active-tool');
+            if(toolEl) {
+                if(window.state.activeTool === 'fishing_rod') toolEl.innerText = "魚竿";
+                else if(window.state.activeTool === 'fishing_net') toolEl.innerText = "漁網";
+                else toolEl.innerText = "十字鎬";
+            }
+
+            const grid = document.getElementById('backpack-content'); 
+            if(grid) {
+                grid.innerHTML = '';
+                let s3 = `<div class="bag-section-title">🛠️ 裝備與工具</div><div class="grid grid-cols-2 gap-4">`;
+                const mTool = config.miningTools[window.state.toolIndex];
+                s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3"><span class="text-3xl">⛏️</span><div><div class="font-bold text-slate-700 text-sm">採礦工具</div><div class="font-black text-slate-900">${mTool.name}</div></div></div>`;
+                if (window.state.fishingToolIndex > 0) {
+                    const fTool = config.fishingTools[window.state.fishingToolIndex];
+                    s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3"><span class="text-3xl">${fTool.icon}</span><div><div class="font-bold text-slate-700 text-sm">捕魚工具</div><div class="font-black text-slate-900">${fTool.name}</div></div></div>`;
+                } else {
+                    s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3 opacity-60"><span class="text-3xl">🖐️</span><div><div class="font-bold text-slate-700 text-sm">捕魚工具</div><div class="font-black text-slate-900">空手</div></div></div>`;
+                }
+                if (window.state.inventory.boat > 0) s3 += `<div class="bg-blue-50 p-4 rounded-2xl border-2 border-blue-200 flex items-center gap-3"><span class="text-3xl">🛶</span><div><div class="font-bold text-blue-700 text-sm">交通工具</div><div class="font-black text-blue-900">渡河小船</div></div></div>`;
+                if (window.state.hatIndex > 0) {
+                    const hat = config.hats[window.state.hatIndex];
+                    s3 += `<div class="bg-slate-50 p-4 rounded-2xl border flex items-center gap-3"><span class="text-3xl">🧢</span><div><div class="font-bold text-slate-700 text-sm">頭飾</div><div class="font-black text-slate-900">${hat.name}</div></div></div>`;
+                }
+                if (window.state.inventory.headlamp > 0) {
+                    s3 += `<div class="bg-yellow-50 p-4 rounded-2xl border-2 border-yellow-200 flex items-center gap-3"><span class="text-3xl">🔦</span><div><div class="font-bold text-yellow-700 text-sm">特殊裝備</div><div class="font-black text-yellow-900">高流明頭燈</div></div></div>`;
+                }
+                s3 += `</div>`; grid.innerHTML += s3;
+                let s1 = `<div class="bag-section-title">💎 礦產與漁獲</div><div class="grid grid-cols-3 gap-4">`;
+                for (let k in config.oreTypes) {
+                    if (window.state.inventory[k] > 0) {
+                        if (k === 'chest') s1 += `<div class="bg-purple-50 p-4 rounded-2xl border-2 border-purple-200 text-center"><span class="text-3xl block">🎁</span><span class="font-bold text-purple-700 text-sm block mb-2">x${window.state.inventory[k]}</span><button onclick="window.openChest()" class="bg-purple-500 text-white px-3 py-1 rounded-lg font-bold text-xs shadow active:scale-95 text-slate-800">開啟</button></div>`;
+                        else s1 += `<div class="bg-white p-4 rounded-2xl border shadow-sm text-center ui-element"><span class="text-3xl block">${config.oreTypes[k].icon}</span><span class="font-bold text-slate-600 text-sm">x${window.state.inventory[k]}</span></div>`;
+                    }
+                }
+                s1 += `</div>`; grid.innerHTML += s1;
+                let s2 = `<div class="bag-section-title">🍱 冒險補給</div><div class="grid grid-cols-2 gap-4">`;
+                for (let k in config.supplies) { if (window.state.inventory[k] > 0) { if (k === 'boat') continue; s2 += `<div class="bg-green-50 p-4 rounded-2xl border-2 border-green-200 shadow-sm flex justify-between items-center text-slate-800"><div><span class="text-3xl">${config.supplies[k].icon}</span> <span class="font-black text-green-700">x${window.state.inventory[k]}</span></div><button onclick="window.useSupply('${k}')" class="bg-green-500 text-white px-3 py-2 rounded-xl font-bold text-sm shadow-md active:scale-95">使用</button></div>`; } }
+                s2 += `</div>`; grid.innerHTML += s2;
+            }
+        };
+
+        window.updateToolVisuals = function() {
+            if (!pickaxeMesh || !fishingRodMesh || !fishingNetMesh) return;
+            pickaxeMesh.visible = false;
+            fishingRodMesh.visible = false;
+            fishingNetMesh.visible = false;
+            if (window.state.activeTool === 'fishing_rod') fishingRodMesh.visible = true;
+            else if (window.state.activeTool === 'fishing_net') fishingNetMesh.visible = true;
+            else pickaxeMesh.visible = true;
+        };
+
+        // --- 3D Scene Functions ---
+        // (保持與之前相同的 3D 建構代碼)
+        function createCharacterModel(color = 0x3b82f6, isMonster = false, scaleOverride = null) {
+            const group = new THREE.Group(); const s = scaleOverride || config.pScale;
+            const skin = isMonster ? 0x111111 : 0xffdbac; const clothes = isMonster ? 0x000000 : color;
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8 * s, 1.2 * s, 0.4 * s), new THREE.MeshStandardMaterial({ color: clothes }));
+            body.position.y = 1.1 * s; group.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.65 * s, 0.65 * s, 0.65 * s), new THREE.MeshStandardMaterial({ color: skin }));
+            head.position.y = 2.05 * s; group.add(head);
+            if (isMonster) {
+                const eMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 3.5 });
+                const le = new THREE.Mesh(new THREE.BoxGeometry(0.22 * s, 0.08 * s, 0.1 * s), eMat); le.position.set(-0.18 * s, 2.15 * s, 0.35 * s); head.add(le);
+                const re = new THREE.Mesh(new THREE.BoxGeometry(0.22 * s, 0.08 * s, 0.1 * s), eMat); re.position.set(0.18 * s, 2.15 * s, 0.35 * s); head.add(re);
+            }
+            const la = new THREE.Mesh(new THREE.BoxGeometry(0.3 * s, 1.0 * s, 0.3 * s), new THREE.MeshStandardMaterial({ color: skin })); la.position.set(-0.55 * s, 1.2 * s, 0); group.add(la);
+            const ra = new THREE.Mesh(new THREE.BoxGeometry(0.3 * s, 1.0 * s, 0.3 * s), new THREE.MeshStandardMaterial({ color: skin })); ra.position.set(0.55 * s, 1.2 * s, 0); group.add(ra);
+            const ll = new THREE.Mesh(new THREE.BoxGeometry(0.35 * s, 0.75 * s, 0.35 * s), new THREE.MeshStandardMaterial({ color: isMonster ? 0x000000 : 0x1e293b })); ll.position.set(-0.25 * s, 0.35 * s, 0); group.add(ll);
+            const rl = new THREE.Mesh(new THREE.BoxGeometry(0.35 * s, 0.75 * s, 0.35 * s), new THREE.MeshStandardMaterial({ color: isMonster ? 0x000000 : 0x1e293b })); rl.position.set(0.25 * s, 0.35 * s, 0); group.add(rl);
+            return { group, head, body, la, ra, ll, rl };
+        }
+
+        function createPlayer() {
+            const s = config.playerScale; const model = createCharacterModel(config.clothesColors[window.state.clothesIndex].color, false, s);
+            playerGroup = new THREE.Group(); visualGroup = model.group; bodyMesh = model.body;
+            leftArm = model.la; rightArm = model.ra; leftLeg = model.ll; rightLeg = model.rl;
+            hatMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.4 * s, 0.6 * s, 0.3 * s, 12), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
+            hatMesh.position.y = 0.45 * s; hatMesh.visible = false; model.head.add(hatMesh);
+            const handle = new THREE.Mesh(new THREE.BoxGeometry(0.1 * s, 1.4 * s, 0.1 * s), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+            pickaxeMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2 * s, 0.15 * s, 0.15 * s), new THREE.MeshStandardMaterial({ color: config.miningTools[window.state.toolIndex].color }));
+            const pAnchor = new THREE.Group(); pAnchor.add(handle); pickaxeMesh.position.y = 0.65 * s; pAnchor.add(pickaxeMesh);
+            pAnchor.position.set(0, -0.4 * s, 0.3 * s); pAnchor.rotation.x = Math.PI / 4; rightArm.add(pAnchor);
+
+            // Fishing Rod
+            const rodHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.05 * s, 0.08 * s, 2.5 * s), new THREE.MeshStandardMaterial({ color: 0x8b4513 }));
+            rodHandle.position.y = 1.0 * s; 
+            fishingRodMesh = new THREE.Group(); fishingRodMesh.add(rodHandle);
+            const stringGeo = new THREE.CylinderGeometry(0.01 * s, 0.01 * s, 1.0 * s);
+            const stringMat = new THREE.MeshBasicMaterial({color: 0xffffff});
+            const string = new THREE.Mesh(stringGeo, stringMat); string.position.set(0, 2.2 * s, 0.5 * s); string.rotation.x = Math.PI / 4;
+            fishingRodMesh.add(string);
+            fishingRodMesh.position.set(0, -0.4 * s, 0.3 * s); fishingRodMesh.rotation.x = Math.PI / 6;
+            rightArm.add(fishingRodMesh);
+            fishingRodMesh.visible = false;
+
+            // Fishing Net
+            fishingNetMesh = new THREE.Group();
+            const netHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.08 * s, 0.08 * s, 2.0 * s), new THREE.MeshStandardMaterial({color: 0x5c4033}));
+            const netRing = new THREE.Mesh(new THREE.TorusGeometry(0.6 * s, 0.05 * s, 8, 16), new THREE.MeshStandardMaterial({color: 0x94a3b8}));
+            netRing.position.y = 1.0 * s;
+            const netBag = new THREE.Mesh(new THREE.ConeGeometry(0.6 * s, 1.2 * s, 16, 1, true), new THREE.MeshStandardMaterial({color: 0xffffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide}));
+            netBag.position.y = 1.0 * s; netBag.rotation.x = Math.PI;
+            fishingNetMesh.add(netHandle); fishingNetMesh.add(netRing); fishingNetMesh.add(netBag);
+            fishingNetMesh.position.set(0, -0.4 * s, 0.5 * s); fishingNetMesh.rotation.x = -Math.PI / 6;
+            rightArm.add(fishingNetMesh);
+            fishingNetMesh.visible = false;
+
+            // Boat
+            const boatGeo = new THREE.BoxGeometry(1.2 * s, 0.5 * s, 1.2 * s);
+            const boatMat = new THREE.MeshStandardMaterial({ color: 0x6F4E37 });
+            boatMesh = new THREE.Mesh(boatGeo, boatMat);
+            boatMesh.position.y = 0.25 * s;
+            boatMesh.visible = false;
+            playerGroup.add(boatMesh);
+            
+            playerGroup.add(visualGroup); scene.add(playerGroup);
+            
+            // Player Light for Cave
+            playerLight = new THREE.PointLight(0xffaa00, 1.2, 800);
+            playerLight.position.set(0, 50, 0);
+            playerGroup.add(playerLight);
+        }
+
+        function createNature() {
+            const riverGeo = new THREE.PlaneGeometry(800, 10000); const riverMat = new THREE.MeshStandardMaterial({ color: 0x0077be, transparent: true, opacity: 0.9 });
+            const river = new THREE.Mesh(riverGeo, riverMat); river.rotation.x = -Math.PI / 2; river.position.set(-1200, 0.2, 0); scene.add(river);
+            [-2500, 0, 2500].forEach(z => {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(850, 5, 150), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+                b.position.set(-1200, 3, z); b.receiveShadow = true; scene.add(b);
+                bridges.push({ x: -1200, z: z, width: 850, depth: 150 });
+            });
+            for (let i = 0; i < 200; i++) {
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 15, 8), new THREE.MeshStandardMaterial({ color: 0x5d4037 })); trunk.position.y = 7.5;
+                const leaves = new THREE.Mesh(new THREE.ConeGeometry(15, 35, 8), new THREE.MeshStandardMaterial({ color: 0x15803d })); leaves.position.y = 30; 
+                const g = new THREE.Group(); g.add(trunk); g.add(leaves);
+                const x = (Math.random() - 0.5) * 5000; const z = (Math.random() - 0.5) * 5000;
+                if(Math.abs(x + 1200) < 450) continue; 
+                g.position.set(x, 0, z); const s = 1.5 + Math.random() * 1.5; g.scale.set(s,s,s); scene.add(g);
+                g.userData = { type: 'tree', radius: 4 * s, active: true }; collidables.push(g);
+            }
+        }
+        
+        function createCrystal() {
+             const g = new THREE.Group();
+             const geo = new THREE.ConeGeometry(4, 15, 6);
+             const mat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00aaaa, emissiveIntensity: 0.5, transparent: true, opacity: 0.8 });
+             const m = new THREE.Mesh(geo, mat);
+             m.position.y = 7.5;
+             g.add(m);
+             return g;
+        }
+
+        // --- MAP GENERATION ---
+
+        function generateIsland() {
+            scene.background = new THREE.Color(0xbae6fd); 
+            scene.fog = new THREE.Fog(0xbae6fd, 150, 1500);
+            const fl = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x22c55e })); 
+            fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
+            createNature();
+            for (let i = 0; i < 1100; i++) {
+                const x = (Math.random() - 0.5) * 6000; const z = (Math.random() - 0.5) * 6000;
+                if (Math.abs(x) < 100 && Math.abs(z) < 100) continue;
+                const isR = x > config.riverRange.min && x < config.riverRange.max; let mesh;
+                if (isR) {
+                    if (!bridges.some(b => Math.abs(z - b.z) < 300) && Math.random() > 0.6) {
+                        const fishModel = new THREE.Group();
+                        const fbody = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 2), new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.8 })); fishModel.add(fbody);
+                        const ftail = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 3), new THREE.MeshStandardMaterial({ color: 0x0284c7 })); ftail.position.x = -4; ftail.rotation.z = Math.PI / 2; fishModel.add(ftail);
+                        mesh = fishModel; mesh.userData = { type: 'fish', radius: 5.0, active: true }; mesh.position.y = 1.5;
+                    }
+                } else {
+                    const r = Math.random();
+                    if (r > 0.96) { mesh = createCharacterModel(0x000000, true, config.monsterScale).group; mesh.userData = { type: 'monster', radius: 8.0, active: true }; }
+                    else if (r > 0.8) { mesh = new THREE.Mesh(new THREE.BoxGeometry(25, 0.5, 25), new THREE.MeshStandardMaterial({ color: 0x854d0e })); mesh.userData = { type: 'field', radius: 6.0, active: true }; mesh.position.y = 0.2; }
+                    else { 
+                        const keys = Object.keys(config.oreTypes).filter(k => k !== 'chest' && k !== 'fish' && k !== 'pearl' && k !== 'crab' && k !== 'lobster' && k !== 'shark');
+                        const o = keys[Math.floor(Math.random() * keys.length)]; 
+                        mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); 
+                        mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; mesh.position.y = 4.5; 
+                    }
+                }
+                if(mesh) { mesh.position.x = x; mesh.position.z = z; mesh.castShadow = true; scene.add(mesh); objects.push(mesh); collidables.push(mesh); }
+            }
+        }
+
+        function generateCave() {
+            scene.background = new THREE.Color(0x111111); scene.fog = new THREE.Fog(0x111111, 50, 400); 
+            const fl = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), new THREE.MeshStandardMaterial({ color: 0x222222 })); 
+            fl.rotation.x = -Math.PI / 2; fl.receiveShadow = true; scene.add(fl);
+            for(let i=0; i<400; i++) {
+                const x = (Math.random() - 0.5) * 4000; const z = (Math.random() - 0.5) * 4000;
+                if(Math.abs(x) < 200 && Math.abs(z) < 200) continue; 
+                if (Math.random() > 0.8) { const cry = createCrystal(); cry.position.set(x, 0, z); const s = 1 + Math.random() * 3; cry.scale.set(s,s,s); scene.add(cry); cry.userData = { type: 'crystal', radius: 4 * s, active: false }; collidables.push(cry); } 
+                else { const wGeo = new THREE.BoxGeometry(30 + Math.random()*50, 200, 30 + Math.random()*50); const wMat = new THREE.MeshStandardMaterial({ color: 0x333333 }); const wall = new THREE.Mesh(wGeo, wMat); wall.position.set(x, 0, z); scene.add(wall); wall.userData = { type: 'wall', radius: 40, active: true }; collidables.push(wall); }
+            }
+            for (let i = 0; i < 600; i++) {
+                const x = (Math.random() - 0.5) * 4000; const z = (Math.random() - 0.5) * 4000;
+                if (Math.abs(x) < 100 && Math.abs(z) < 100) continue;
+                const pos = new THREE.Vector3(x, 0, z); let hitWall = false;
+                for(let c of collidables) { if(pos.distanceTo(c.position) < c.userData.radius + 10) hitWall = true; }
+                if(hitWall) continue;
+                let mesh;
+                if (Math.random() > 0.8) { mesh = createCharacterModel(0xff0000, true, config.monsterScale).group; mesh.userData = { type: 'monster', radius: 8.0, active: true }; } 
+                else { const keys = ['gold', 'diamond', 'ruby', 'iron']; const o = keys[Math.floor(Math.random() * keys.length)]; mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; mesh.position.y = 4.5; }
+                if(mesh) { mesh.position.x = x; mesh.position.z = z; mesh.castShadow = true; scene.add(mesh); objects.push(mesh); collidables.push(mesh); }
+            }
+        }
+
+        // --- SCENE MANAGEMENT ---
+
+        function initScene() {
+            if (isInitialized) return; isInitialized = true;
+            scene = new THREE.Scene(); 
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 8000); clock = new THREE.Clock();
+            renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement); 
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(150, 400, 150); sun.castShadow = true; scene.add(sun);
+            createPlayer(); window.loadMap(window.state.currentMap); window.initTTS(); animate();
+        }
+        window.initScene = initScene;
+
+        window.loadMap = (mapType) => {
+            objects.forEach(o => scene.remove(o)); objects = [];
+            scene.children.forEach(c => { if(c.userData.active !== undefined || (c.geometry && c.geometry.type === 'PlaneGeometry')) scene.remove(c); });
+            while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(150, 400, 150); sun.castShadow = true; scene.add(sun);
+            createPlayer(); objects = []; collidables = []; bridges = [];
+            if(mapType === 'cave') { generateCave(); const hasLamp = window.state.inventory.headlamp > 0; if(playerLight) { playerLight.distance = hasLamp ? 1500 : 600; playerLight.intensity = hasLamp ? 2.5 : 1.2; playerLight.visible = true; } } 
+            else { generateIsland(); if(playerLight) playerLight.visible = false; }
+            playerGroup.position.set(0,0,0);
+        };
+
+        window.switchMap = () => {
+            if(window.state.currentMap === 'island') {
+                if(window.state.level < config.maps.cave.minLevel) { window.showToast(`等級不足！需達 Lv.${config.maps.cave.minLevel} 才能進入`); return; }
+                window.state.currentMap = 'cave'; window.showToast("前往：幽暗地底");
+            } else { window.state.currentMap = 'island'; window.showToast("前往：陽光島嶼"); }
+            window.loadMap(window.state.currentMap); window.saveProgress();
+        }
+        
+        window.buyHeadlamp = () => {
+             const item = config.specialItems.headlamp;
+             if (window.state.inventory.headlamp > 0) return;
+             if (window.state.money >= item.cost) {
+                 window.state.money -= item.cost; window.state.inventory.headlamp = 1; window.updateUI(); window.changeShopTab('tools'); window.saveProgress(); window.showToast("已購買頭燈！洞窟探險更安全了");
+                 if(window.state.currentMap === 'cave' && playerLight) { playerLight.distance = 1500; playerLight.intensity = 2.5; }
+             } else { window.showToast("金錢不足！"); }
+        };
+
+        function animate() {
+            requestAnimationFrame(animate); const delta = clock.getDelta();
+            if (!window.state.isAnswering) {
+                if (window.state.isMining) {
+                    window.state.miningTime += delta; rightArm.rotation.x = -Math.PI / 2 + Math.sin(window.state.miningTime * 18) * 2.0;
+                    if (window.state.miningTime > 0.6) { window.state.isMining = false; rightArm.rotation.x = 0; triggerChallenge(); }
+                } else { handleMovement(); checkProximity(); }
+            }
+            renderer.render(scene, camera);
+        }
+
+        function handleMovement() {
+            const moveDir = new THREE.Vector3();
+            if (window.keys['KeyW'] || window.keys['ArrowUp'] || window.keys['w']) moveDir.z -= 1;
+            if (window.keys['KeyS'] || window.keys['ArrowDown'] || window.keys['s']) moveDir.z += 1;
+            if (window.keys['KeyA'] || window.keys['ArrowLeft'] || window.keys['a']) moveDir.x -= 1;
+            if (window.keys['KeyD'] || window.keys['ArrowRight'] || window.keys['d']) moveDir.x += 1;
+            
+            if (moveDir.length() > 0) {
+                moveDir.normalize(); 
+                visualGroup.rotation.y = THREE.MathUtils.lerp(visualGroup.rotation.y, Math.atan2(moveDir.x, moveDir.z), config.rotationSpeed);
+                
+                // Apply speed buff from hat
+                const hat = config.hats[window.state.hatIndex];
+                const speedMultiplier = 1 + (hat.effect ? hat.effect.speed : 0);
+                const finalSpeed = config.moveSpeed * speedMultiplier;
+                
+                const nextPos = playerGroup.position.clone().add(moveDir.multiplyScalar(finalSpeed));
+                let onB = false; for (let b of bridges) { if (Math.abs(nextPos.x - b.x) < 425 && Math.abs(nextPos.z - b.z) < (b.depth / 2)) { onB = true; break; } }
+                const inRiver = window.state.currentMap === 'island' && nextPos.x > config.riverRange.min && nextPos.x < config.riverRange.max && !onB;
+                if (!isColliding(nextPos)) {
+                    if (inRiver) {
+                        if (window.state.inventory.boat > 0) { playerGroup.position.x = nextPos.x; playerGroup.position.z = nextPos.z; playerGroup.position.y = 0; if(boatMesh) boatMesh.visible = true; if(leftLeg) leftLeg.visible = false; if(rightLeg) rightLeg.visible = false; } 
+                        else { window.showToast("水深危險！請尋找橋樑或購買渡河小船。"); }
+                    } else {
+                        playerGroup.position.x = nextPos.x; playerGroup.position.z = nextPos.z; playerGroup.position.y = onB ? 5.5 : 0;
+                        if(boatMesh) boatMesh.visible = false; if(leftLeg) leftLeg.visible = true; if(rightLeg) rightLeg.visible = true;
+                    }
+                }
+                const t = Date.now() * 0.015; 
+                if(!inRiver) { leftLeg.rotation.x = Math.sin(t) * 1.5; rightLeg.rotation.x = -Math.sin(t) * 1.5; }
+                leftArm.rotation.x = -Math.sin(t) * 1.2; rightArm.rotation.x = Math.sin(t) * 1.2;
+            } else { if(leftLeg) leftLeg.rotation.x = 0; if(rightLeg) rightLeg.rotation.x = 0; leftArm.rotation.x = 0; rightArm.rotation.x = 0; }
+            camera.position.copy(playerGroup.position).add(new THREE.Vector3(0, 100, 150)); camera.lookAt(playerGroup.position);
+        }
+
+        function isColliding(pos) { for (let obj of collidables) { if (obj.userData.active && pos.distanceTo(obj.position) < (config.playerHitbox + obj.userData.radius)) return true; } return false; }
+
+        function checkProximity() {
+            let found = false;
+            objects.forEach(obj => { if (obj.userData.active && playerGroup.position.distanceTo(obj.position) < 28.0) { found = true; window.state.currentObject = obj; } });
+            const hint = document.getElementById('interaction-hint');
+            if (hint) {
+                if (found) {
+                    hint.classList.remove('hidden'); const u = window.state.currentObject.userData;
+                    if(u.type === 'monster') hint.innerText = "[K] 挑戰怪獸 (體力: 30)"; else if(u.type === 'field') hint.innerText = "[K] 搜索田地 (體力: 5)";
+                    else if(u.type === 'fish') hint.innerText = "[K] 捕魚挑戰 (體力: 10)"; else hint.innerText = "[K] 採礦挑戰 (體力: 10)";
+                } else { hint.classList.add('hidden'); window.state.currentObject = null; }
+            }
+        }
+
+        function triggerChallenge() {
+            window.state.isAnswering = true;
+            const type = window.state.currentObject.userData.type;
+            
+            // 怪物強制困難度，其他依據任務難度設定，但這裡我們統一使用任務池的難度
+            const reqDiff = type === 'monster' ? 'hard' : 'normal';
+            
+            // Get questions from Active Mission
+            const missionId = window.state.activeMissionId || 'mission_mul_2';
+            const mission = window.globalMissions[missionId] || window.globalMissions['mission_mul_2'];
+            let pool = mission.questions || [];
+            
+            // 如果池子空了（不應該發生），回退
+            if(pool.length === 0) pool = window.globalMissions['mission_mul_2'].questions;
+
+            // --- 智能選題邏輯 ---
+            // 找出所有還沒答對過的題目索引
+            const allIndices = pool.map((_, i) => i);
+            const remainingIndices = allIndices.filter(i => !window.state.completedQuestions.includes(i));
+
+            let targetPool = []; 
+
+            if (remainingIndices.length > 0) {
+                 // 這裡簡化邏輯：只要還有沒答過的，就隨機選一題
+                 targetPool = remainingIndices.map(i => pool[i]);
+            } else {
+                // 全部答完了 (或者是重玩)，就隨機出題
+                targetPool = pool;
+            }
+
+            // Pick one
+            const qIndex = Math.floor(Math.random() * targetPool.length);
+            window.state.currentQuestion = targetPool[qIndex];
+            // 找出這題在原始 pool 中的索引，用於追蹤進度
+            window.state.currentQuestionIdx = pool.indexOf(window.state.currentQuestion); 
+            
+            const q = window.state.currentQuestion;
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('q-feedback').innerText = "";
+            const titleEl = document.getElementById('q-title');
+            const speakerBtn = document.getElementById('tts-btn');
+            const diffBadge = document.getElementById('q-diff-badge');
+            
+            if (type === 'monster') { titleEl.innerText = "戰鬥中"; titleEl.className = "text-red-600 font-black text-2xl tracking-widest italic uppercase"; }
+            else if (type === 'field') { titleEl.innerText = "搜索田地中"; titleEl.className = "text-green-600 font-black text-2xl tracking-widest italic uppercase"; }
+            else if (type === 'fish') { titleEl.innerText = "捕魚中"; titleEl.className = "text-sky-600 font-black text-2xl tracking-widest italic uppercase"; }
+            else { titleEl.innerText = "挖礦中"; titleEl.className = "text-blue-600 font-black text-2xl tracking-widest italic uppercase"; }
+            
+            // 顯示實際題目的難度，而非觸發物件的難度
+            const actualDiff = q.difficulty || 'normal';
+            diffBadge.innerText = (actualDiff === 'hard' ? "HARD / 困難" : "NORMAL / 普通");
+            
+            if (window.state.autoRead) { speakerBtn.classList.remove('hidden'); window.speak(q.q); } else speakerBtn.classList.add('hidden');
+            
+            const opts = document.getElementById('q-options'); opts.innerHTML = '';
+            if (q.type === 'mc' || q.type === 'tf') {
+                q.a.forEach((txt, i) => {
+                    const row = document.createElement('div'); row.className = "flex gap-2 w-full text-slate-800";
+                    const b = document.createElement('button');
+                    b.className = "flex-1 text-left p-5 rounded-3xl border-4 border-slate-100 hover:border-blue-500 bg-white text-2xl font-black shadow-sm ui-element text-slate-800";
+                    b.innerText = txt; b.onclick = () => window.checkAns(i);
+                    const s = document.createElement('button');
+                    if (window.state.autoRead) { s.className = "p-5 bg-slate-50 rounded-full text-xl shadow-md ui-element active:scale-90 transition-all text-slate-800"; s.innerHTML = "🔊"; s.onclick = (e) => { e.stopPropagation(); window.speak(txt); }; row.append(b, s); } else row.append(b);
+                    opts.appendChild(row);
+                });
+            } else if (q.type === 'sa') {
+                opts.innerHTML = `<input id="sa-ans" class="w-full p-8 rounded-3xl border-4 text-3xl font-black text-center mb-4 ui-element text-slate-800" placeholder="請在此輸入答案...">
+                    <button onclick="window.checkAns(document.getElementById('sa-ans').value.trim())" class="w-full bg-blue-500 text-white p-5 rounded-3xl text-2xl font-black shadow-lg ui-element text-slate-800">提交答案</button>`;
+            }
+            document.getElementById('modal-container').classList.remove('hidden');
+            document.getElementById('question-modal').classList.remove('hidden');
+        }
+
+        window.updateDpadPosition = (isRight) => { window.state.isDpadOnRight = isRight; window.updateHandedness(); window.saveProgress(); };
+        
+        window.startGame = async function() { 
+            const name = document.getElementById('player-name-input').value.trim();
+            const password = document.getElementById('player-password-input').value.trim();
+            const missionId = document.getElementById('login-mission-select').value;
+
+            if (!name) { window.showToast("請輸入名字"); return; }
+            if (!password) { window.showToast("請輸入密碼"); return; }
+
+            // Ensure missions are loaded first
+            await window.loadGlobalMissions();
+
+            const success = await window.loadStudentData(name, password);
+            if (success) {
+                // Set active mission
+                window.state.activeMissionId = missionId;
+                if (!window.globalMissions[missionId]) window.state.activeMissionId = 'mission_mul_2';
+                
+                document.getElementById('blocker').style.display = 'none';
+                window.state.password = password; 
+                window.saveProgress();
+                
+                const mTitle = window.globalMissions[window.state.activeMissionId].title;
+                window.showToast(`任務開始：${mTitle}`);
+                window.updateUI();
+            }
+        };
+
+        window.openMissionSelect = () => {
+            window.updateMissionDropdowns();
+            window.toggleModal('mission-select-modal');
+        }
+
+        window.goHome = function() {
+            document.getElementById('blocker').style.display = 'flex';
+            document.getElementById('system-menu-modal').classList.add('hidden');
+            document.getElementById('modal-container').classList.add('hidden');
+        };
+        
+        window.switchTool = () => {
+            if (window.state.activeTool === 'pickaxe') {
+                if (window.state.fishingToolIndex > 0) { window.state.activeTool = 'fishing_rod'; window.showToast("已裝備：魚竿 (耗體: 10)"); } 
+                else { window.showToast("尚未擁有魚竿，請至商店購買！"); }
+            } else if (window.state.activeTool === 'fishing_rod') {
+                if (window.state.fishingToolIndex >= 2) { window.state.activeTool = 'fishing_net'; window.showToast("已裝備：漁網 (產量UP!)"); } 
+                else { window.state.activeTool = 'pickaxe'; window.showToast("已裝備：十字鎬 (耗體: 10)"); }
+            } else { window.state.activeTool = 'pickaxe'; window.showToast("已裝備：十字鎬 (耗體: 10)"); }
+            window.updateToolVisuals(); window.updateUI(); window.saveProgress();
+        };
+
+        window.changeShopTab = (tab) => {
+            window.state.shopTab = tab; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active'));
+            const eT = document.getElementById('tab-' + tab); if(eT) eT.classList.add('active');
+            const cont = document.getElementById('shop-content'); if(!cont) return; cont.innerHTML = '';
+            if (tab === 'recycle') {
+                cont.innerHTML = `<button onclick="window.sellAll()" class="w-full bg-green-500 text-white p-5 rounded-2xl font-black mb-4 shadow-md text-slate-800">💰 全部賣出</button>`;
+                for (let k in config.oreTypes) { if (window.state.inventory[k] > 0) { const info = config.oreTypes[k]; cont.innerHTML += `<div class="flex justify-between items-center p-4 bg-white rounded-3xl border mb-2 text-slate-800"><span class="font-bold text-lg text-slate-800">${info.icon} ${info.name} (x${window.state.inventory[k]})</span><button onclick="window.sellOne('${k}')" class="bg-blue-500 text-white px-4 py-2 rounded-xl font-bold">賣 1 ($${info.value})</button></div>`; } }
+            } else if (tab === 'tools') {
+                cont.innerHTML += `<div class="shop-sub-title">⛏️ 採礦工具</div>`;
+                config.miningTools.forEach((t, i) => { cont.innerHTML += `<button onclick="window.buyTool(${i})" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${window.state.toolIndex === i ? 'border-blue-500' : 'border-slate-50'}"><span>${t.name}</span> <span class="text-blue-600">${window.state.toolIndex >= i ? '已持有' : '$'+t.cost}</span></button>`; });
+                cont.innerHTML += `<div class="shop-sub-title">🎣 捕魚工具</div>`;
+                config.fishingTools.forEach((t, i) => { cont.innerHTML += `<button onclick="window.buyFishingTool(${i})" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${window.state.fishingToolIndex === i ? 'border-sky-500' : 'border-slate-50'}"><span>${t.icon} ${t.name}</span> <span class="text-sky-600">${window.state.fishingToolIndex >= i ? '已持有' : '$'+t.cost}</span></button>`; });
+                cont.innerHTML += `<div class="shop-sub-title">🛶 交通工具</div>`;
+                const boowned = window.state.inventory.boat > 0;
+                cont.innerHTML += `<button onclick="window.buyBoat()" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${boowned ? 'border-indigo-500' : 'border-slate-50'}"><span>渡河小船</span> <span class="text-indigo-600">${boowned ? '已擁有' : '$'+config.supplies.boat.cost}</span></button>`;
+                cont.innerHTML += `<div class="shop-sub-title">🔦 特殊裝備</div>`;
+                const hpowned = window.state.inventory.headlamp > 0;
+                const hp = config.specialItems.headlamp;
+                cont.innerHTML += `<button onclick="window.buyHeadlamp()" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${hpowned ? 'border-yellow-500' : 'border-slate-50'}"><span>${hp.icon} ${hp.name}</span> <span class="text-yellow-600">${hpowned ? '已擁有' : '$'+hp.cost}</span></button>`;
+            } else if (tab === 'avatar') {
+                config.hats.forEach((h, i) => { const ow = window.state.ownedHats.includes(i); cont.innerHTML += `<button onclick="window.buyHat(${i})" class="w-full flex justify-between p-4 bg-white rounded-2xl border-4 mb-2 font-black text-slate-800 ${window.state.hatIndex === i ? 'border-purple-500' : 'border-slate-50'}"><span>${h.name}</span> <span class="px-4 py-1 rounded-xl ${ow ? 'bg-slate-200 text-slate-500' : 'bg-yellow-400 text-white'}">${ow ? '已擁有' : '$'+h.cost}</span></button>`; });
+            } else if (tab === 'supplies') {
+                for (let k in config.supplies) { if(k==='boat')continue; const s = config.supplies[k]; cont.innerHTML += `<button onclick="window.buySupply('${k}')" class="w-full flex justify-between p-5 bg-white rounded-2xl border-4 border-green-50 mb-2 font-black text-slate-800"><span>${s.icon} ${s.name} (❤️+${s.heal})</span> <span class="text-green-600">$${s.cost}</span></button>`; }
+            }
+        };
+
+        window.openShop = () => { window.toggleModal('shop-modal'); window.changeShopTab('recycle'); };
+
+        window.finishOk = (bonus = false) => {
+            const u = window.state.currentObject.userData;
+            let gainMoney = 0; let gainExp = 0; let costStamina = 0; let rewardItems = [];
+
+            // Apply Stamina reduction from hat
+            const hat = config.hats[window.state.hatIndex];
+            const staminaReduction = (hat.effect ? hat.effect.stamina : 0);
+
+            if (u.type === 'ore') { costStamina = config.costs.mining; const data = config.oreTypes[u.ore]; window.state.inventory[u.ore]++; gainMoney = Math.floor(data.value * 0.2); gainExp = data.exp; } 
+            else if (u.type === 'fish') {
+                costStamina = config.costs.fishing; let amount = 1;
+                if (window.state.activeTool === 'fishing_net') {
+                    const r = Math.random();
+                    if (r > 0.95) { window.state.inventory['shark']++; rewardItems.push({icon: '🦈', name: '傳說鯊魚', amount: 1}); } 
+                    else if (r > 0.90) { window.state.inventory['pearl']++; rewardItems.push({icon: '🔮', name: '深海珍珠', amount: 1}); } 
+                    else if (r > 0.70) { window.state.inventory['lobster']++; rewardItems.push({icon: '🦞', name: '大龍蝦', amount: 1}); } 
+                    else if (r > 0.40) { window.state.inventory['crab']++; rewardItems.push({icon: '🦀', name: '帝王蟹', amount: 1}); } 
+                    else { amount = 3; }
+                }
+                window.state.inventory['fish'] += amount; gainMoney += 50 * amount; gainExp += 150 * amount;
+            } else if (u.type === 'monster') { costStamina = config.costs.monster; gainExp = 500; gainMoney = 200; } 
+            else if (u.type === 'field') { costStamina = config.costs.field; gainExp = 200; gainMoney = 50; }
+
+            // Apply buff, ensure cost is at least 1
+            const finalCost = Math.max(1, costStamina + staminaReduction);
+            window.state.health = Math.max(0, window.state.health - finalCost);
+
+            if (bonus) { gainMoney *= 2; gainExp *= 1.5; }
+            window.state.money += Math.floor(gainMoney); window.state.exp += Math.floor(gainExp);
+            if (window.state.exp >= window.state.level * 5000) { window.state.level++; window.state.exp = 0; window.showToast(`升級了！Lv. ${window.state.level}`); }
+            
+            if (u.type !== 'monster') { scene.remove(window.state.currentObject); window.state.currentObject.userData.active = false; }
+            else { scene.remove(window.state.currentObject); window.state.currentObject.userData.active = false; }
+            
+            window.updateUI(); window.saveProgress(); window.closeQuestion();
+
+            if (rewardItems.length > 0 && u.type === 'fish') {
+                const list = document.getElementById('reward-list'); list.innerHTML = '';
+                rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
+                document.getElementById('reward-modal').classList.remove('hidden');
+            }
+            if (u.type === 'monster') {
+                rewardItems.push({icon: '✨', name: '經驗值', amount: Math.floor(gainExp)}); rewardItems.push({icon: '💰', name: '金幣', amount: Math.floor(gainMoney)});
+                if (Math.random() > 0.8) { window.state.inventory['chest']++; rewardItems.push({icon: '🎁', name: '稀有寶箱', amount: 1}); }
+                const list = document.getElementById('reward-list'); list.innerHTML = '';
+                rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
+                document.getElementById('reward-modal').classList.remove('hidden');
+            }
+        };
+
+        window.checkAns = (ans) => {
+            const q = window.state.currentQuestion; const fb = document.getElementById('q-feedback');
+            // Check answer: string comparison or number equality
+            let isCorrect = false;
+            if (q.type === 'sa') {
+                isCorrect = (ans.toString() === q.correct.toString());
+            } else {
+                isCorrect = (ans == q.correct);
+            }
+
+            if (isCorrect) {
+                window.state.streak++; const type = window.state.currentObject.userData.type;
+                let msg = "答對了！";
+                if(type === 'monster') msg += "成功打敗怪物 ✨"; else if(type === 'field') msg += "成功挖掘 ✨";
+                else if(type === 'fish') msg += "成功捕獲鮮魚 🐟"; else msg += "挖礦成功 ✨";
+                fb.innerText = msg; fb.style.color = "#10b981";
+                
+                // Track progress
+                const idx = window.state.currentQuestionIdx;
+                if (!window.state.completedQuestions.includes(idx) && idx !== undefined && idx >= 0) {
+                     window.state.completedQuestions.push(idx);
+                }
+                
+                // Check if Mission Complete
+                const mId = window.state.activeMissionId || 'mission_mul_2';
+                const mission = window.globalMissions[mId];
+                if (mission && window.state.completedQuestions.length >= mission.questions.length && mission.questions.length > 0) {
+                     // Mission Complete!
+                     setTimeout(() => {
+                         window.closeQuestion();
+                         
+                         // Mark as completed permanently
+                         if (!window.state.completedMissionIds) window.state.completedMissionIds = [];
+                         if (!window.state.completedMissionIds.includes(mId)) {
+                             window.state.completedMissionIds.push(mId);
+                             window.saveProgress();
+                         }
+                         
+                         window.openMissionComplete();
+                     }, 800);
+                     return;
+                }
+
+                if (window.state.streak > 0 && window.state.streak % 10 === 0) {
+                    setTimeout(() => {
+                        window.state.inventory['chest']++; const rO = ['stone', 'iron', 'gold'][Math.floor(Math.random() * 3)]; window.state.inventory[rO] += 5; 
+                        window.showToast(`🔥 連對 10 題！獲得：神秘寶箱 x1 + ${config.oreTypes[rO].name} x5`); window.finishOk(true); 
+                    }, 500);
+                } else setTimeout(() => window.finishOk(false), 1000);
+            } else {
+                window.state.streak = 0; fb.innerText = "答錯！受到傷害 -15 體力"; fb.style.color = "#ef4444";
+                window.state.health = Math.max(0, window.state.health - 15); window.updateUI();
+                // 體力耗盡，彈出提示
+                if (window.state.health <= 0) { 
+                    window.closeQuestion(); 
+                    window.openResetConfirm("體力耗盡！", "您已經沒有體力了。請到背包使用食物，或者重置遊戲。", false); 
+                }
+            }
+        };
+        
+        window.openMissionComplete = () => {
+             document.getElementById('modal-container').classList.remove('hidden');
+             document.getElementById('mission-complete-modal').classList.remove('hidden');
+        };
+        
+        window.closeMissionComplete = () => {
+             document.getElementById('mission-complete-modal').classList.add('hidden');
+             window.openMissionSelect(); // Force select new mission
+        };
+
+        window.tryInteract = () => {
+            if (!window.state.isAnswering && !window.state.isMining) {
+                
+                // Enforce Mission Selection if finished
+                const mId = window.state.activeMissionId || 'mission_mul_2';
+                const mission = window.globalMissions[mId];
+                
+                // Check if current active mission is in completed list
+                if (window.state.completedMissionIds && window.state.completedMissionIds.includes(mId)) {
+                     window.showToast("此任務已完成，請選擇新任務！");
+                     window.openMissionSelect();
+                     return;
+                }
+
+                if (!window.state.currentObject) { window.showToast("太遠了！請靠近目標再互動"); return; }
+                const u = window.state.currentObject.userData;
+                
+                // Apply Stamina reduction check
+                const hat = config.hats[window.state.hatIndex];
+                const staminaReduction = (hat.effect ? hat.effect.stamina : 0);
+                
+                let cost = 0;
+                if(u.type === 'ore') cost = config.costs.mining; else if(u.type === 'fish') cost = config.costs.fishing; else if(u.type === 'monster') cost = config.costs.monster; else if(u.type === 'field') cost = config.costs.field;
+                
+                const finalCost = Math.max(1, cost + staminaReduction);
+
+                if (window.state.health < finalCost) { 
+                    window.openResetConfirm("體力不足！", "您需要更多體力才能進行此操作。請使用背包中的食物，或者重置遊戲。", false); 
+                    return; 
+                }
+                
+                if (u.type === 'fish') {
+                    if (window.state.activeTool !== 'fishing_rod' && window.state.activeTool !== 'fishing_net') { window.showToast("請換上魚竿或漁網 (點擊 🔄 按鈕) 才能捕魚！"); return; }
+                    if (window.state.inventory.boat <= 0) { window.showToast("需要「渡河小船」才能接近魚群。"); return; }
+                } else if (u.type === 'ore' || u.type === 'field') {
+                    if (window.state.activeTool !== 'pickaxe') { window.showToast("請換成十字鎬 (點擊 🔄 按鈕) 才能工作！"); return; }
+                }
+                if (u.type === 'monster') window.openBattleConfirm(); else { window.state.isMining = true; window.state.miningTime = 0; }
+            }
+        };
+
+        window.openChest = () => {
+            if (window.state.inventory.chest <= 0) return; window.state.inventory.chest--;
+            const rewards = [{icon: '💰', name: '現金', amount: 1000 + Math.floor(Math.random() * 3000)}];
+            window.state.money += rewards[0].amount;
+            if(Math.random() > 0.5) { window.state.inventory.diamond += 1; rewards.push({icon: config.oreTypes.diamond.icon, name: config.oreTypes.diamond.name, amount: 1}); } 
+            else { window.state.inventory.ruby += 2; rewards.push({icon: config.oreTypes.ruby.icon, name: config.oreTypes.ruby.name, amount: 2}); }
+            window.state.exp += 5000; rewards.push({icon: '✨', name: '大量經驗', amount: 5000});
+            const list = document.getElementById('reward-list'); list.innerHTML = '';
+            rewards.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
+            document.getElementById('reward-modal').classList.remove('hidden'); window.updateUI(); window.saveProgress();
+        };
+
+        // Reset Game Functions
+        window.openResetConfirm = (title, desc, isGameOver = false) => {
+            const tEl = document.getElementById('reset-title'); const dEl = document.getElementById('reset-desc'); const cBtn = document.getElementById('btn-cancel-reset');
+            tEl.innerText = title || "確定重置？"; dEl.innerHTML = desc || "所有等級、金錢、道具將會歸零！<br>體力將回滿，題庫設定會保留。";
+            
+            // Removed Soft Reset Option
+            cBtn.innerText = "取消"; 
+            cBtn.onclick = window.closeResetConfirm; 
+            
+            document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('reset-confirm-modal').classList.remove('hidden');
+        };
+
+        window.closeResetConfirm = () => {
+             document.getElementById('reset-confirm-modal').classList.add('hidden');
+             const others = Array.from(document.querySelectorAll('.modal-mask')).filter(m => !m.classList.contains('hidden') && m.id !== 'reset-confirm-modal');
+             if (others.length === 0) document.getElementById('modal-container').classList.add('hidden');
+        };
+
+        window.resetGame = async () => {
+            const name = window.state.playerName; const pass = window.state.password; const uid = window.state.userId;
+            window.state = {
+                userId: uid, money: 0, level: 1, exp: 0, health: 100, streak: 0, playerName: name, password: pass,
+                inventory: { 'stone': 0, 'iron': 0, 'gold': 0, 'ruby': 0, 'diamond': 0, 'chest': 0, 'pearl': 0, 'chocolate': 0, 'meal': 0, 'energy_drink': 0, 'steak': 0, 'boat': 0, 'fish': 0, 'crab': 0, 'lobster': 0, 'shark': 0, 'headlamp': 0 },
+                toolIndex: 0, fishingToolIndex: 0, hatIndex: 0, clothesIndex: 0, ownedHats: [0], 
+                activeMissionId: 'mission_mul_2', completedQuestions: [], missionProgress: 0,
+                autoRead: window.state.autoRead, voiceURI: window.state.voiceURI, speechRate: window.state.speechRate, isTablet: window.state.isTablet, isDpadOnRight: window.state.isDpadOnRight,
+                activeTool: 'pickaxe', currentMap: 'island'
+            };
+            await window.saveProgress(); window.loadMap('island'); window.updateUI(); window.updateToolVisuals(); window.selectCharColor(0); 
+            window.closeResetConfirm(); document.getElementById('settings-modal').classList.add('hidden'); 
+            if(document.querySelectorAll('.modal-mask:not(.hidden)').length === 0) document.getElementById('modal-container').classList.add('hidden');
+            window.showToast("遊戲已完全重置！");
+        };
+
+        window.openSystemMenu = () => {
+            window.toggleModal('system-menu-modal');
+        }
+
+        window.toggleModal = (id) => { const el = document.getElementById(id); const c = document.getElementById('modal-container'); if(el) { c.classList.remove('hidden'); el.classList.toggle('hidden'); if(Array.from(document.querySelectorAll('.modal-mask')).every(m => m.classList.contains('hidden'))) c.classList.add('hidden'); } if(id==='shop-modal') window.changeShopTab('recycle'); if(id==='settings-modal') window.renderTeacherMissionList(); if(id==='backpack-modal') window.updateUI(); };
+        window.toggleTabletMode = () => { window.state.isTablet = !window.state.isTablet; document.body.classList.toggle('tablet-mode', window.state.isTablet); window.showToast(window.state.isTablet ? "開啟搖桿介面" : "關閉搖桿介面"); };
+        window.onWindowResize = () => { if (!camera || !renderer) return; camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+        window.speak = (t) => { 
+            // 語音修正：將 x 改為 "成" (符合要求)
+            let spokenText = t.replace(/x/g, "成").replace(/=/g, "等於");
+            
+            const u = new SpeechSynthesisUtterance(spokenText); 
+            u.lang = 'zh-TW'; 
+            u.rate = window.state.speechRate; 
+            const sv = speechSynthesis.getVoices().find(v => v.voiceURI === window.state.voiceURI); 
+            if (sv) u.voice = sv; 
+            window.speechSynthesis.speak(u); 
+        }
+        window.speakQuestion = () => { if(window.state.currentQuestion) window.speak(window.state.currentQuestion.q); }
+        window.closeQuestion = () => { document.getElementById('question-modal').classList.add('hidden'); document.getElementById('modal-container').classList.add('hidden'); window.state.isAnswering = false; }
+        window.openBattleConfirm = () => { document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('battle-confirm-modal').classList.remove('hidden'); window.state.isAnswering = true; }
+        window.closeBattleConfirm = () => { document.getElementById('battle-confirm-modal').classList.add('hidden'); document.getElementById('modal-container').classList.add('hidden'); window.state.isAnswering = false; }
+        window.startBattle = () => { window.closeBattleConfirm(); window.state.isMining = true; window.state.miningTime = 0; }
+        window.unequipHat = () => { window.state.hatIndex = 0; window.updateUI(); window.saveProgress(); window.showToast("已卸下裝備"); }
+        window.equipHat = (idx) => { window.state.hatIndex = idx; window.updateUI(); window.saveProgress(); window.showToast(`已裝備：${config.hats[idx].name}`); }
+        window.useSupply = (key) => { if (window.state.inventory[key] > 0) { if (window.state.health >= 100) { window.showToast("體力已滿！"); return; } const it = config.supplies[key]; window.state.inventory[key]--; window.state.health = Math.min(100, window.state.health + it.heal); window.updateUI(); window.saveProgress(); window.showToast(`使用了 ${it.name}`); } }
+        window.downloadExampleCSV = function() { 
+            const header = "\ufeff類型,題目,選項1,選項2,選項3,選項4,正確答案(1-4),難度(normal/hard)\n"; 
+            const content = "mc,8x9=?,72,64,81,90,1,normal\ntf,3x3=9,是,否,,,1,normal\nsa,12x12=?,144,,,1,hard"; 
+            const blob = new Blob([header + content], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.setAttribute("download", "乘法練習範例.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); 
+        }
+        window.handleCSVUpload = function(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { document.getElementById('import-area').value = e.target.result; window.showToast("讀取檔案成功！"); }; reader.readAsText(file); }
+        window.buyTool = (i) => { if (window.state.money >= config.miningTools[i].cost && i > window.state.toolIndex) { window.state.money -= config.miningTools[i].cost; window.state.toolIndex = i; window.updateUI(); window.changeShopTab('tools'); window.saveProgress(); window.showToast("工具升級！"); } };
+        window.buyFishingTool = (i) => { if (window.state.money >= config.fishingTools[i].cost && i > window.state.fishingToolIndex) { window.state.money -= config.fishingTools[i].cost; window.state.fishingToolIndex = i; window.updateUI(); window.changeShopTab('tools'); window.saveProgress(); window.showToast("捕魚工具升級！"); } };
+        window.buyBoat = () => { if (window.state.inventory.boat <= 0 && window.state.money >= config.supplies.boat.cost) { window.state.money -= config.supplies.boat.cost; window.state.inventory.boat = 1; window.updateUI(); window.changeShopTab('tools'); window.saveProgress(); window.showToast("購買成功！"); } };
+        window.buyHat = (i) => { if (window.state.ownedHats.includes(i)) return; if (window.state.money >= config.hats[i].cost) { window.state.money -= config.hats[i].cost; window.state.ownedHats.push(i); window.updateUI(); window.changeShopTab('avatar'); window.saveProgress(); window.showToast("購買成功！"); } };
+        window.buySupply = (key) => { const item = config.supplies[key]; if (window.state.money >= item.cost) { window.state.money -= item.cost; window.state.inventory[key]++; window.updateUI(); window.saveProgress(); window.showToast(`已放入背包！`); } };
+        window.sellAll = () => { let g = 0; for (let k in config.oreTypes) { g += window.state.inventory[k] * config.oreTypes[k].value; window.state.inventory[k] = 0; } if (g > 0) { window.state.money += g; window.updateUI(); window.changeShopTab('recycle'); window.saveProgress(); window.showToast(`獲得 $${g}！`); } };
+        window.sellOne = (k) => { if (window.state.inventory[k] > 0) { window.state.inventory[k]--; window.state.money += config.oreTypes[k].value; window.updateUI(); window.changeShopTab('recycle'); window.saveProgress(); } };
+        window.setKey = (code, active, btn) => { window.keys[code] = active; if (active) btn.classList.add('active-state'); else btn.classList.remove('active-state'); };
+
+        if(auth) {
+            onAuthStateChanged(auth, async (user) => { 
+                if (user && window.state) { 
+                    window.state.userId = user.uid; 
+                    await window.loadGlobalMissions(); 
+                    window.initScene(); 
+                    window.updateUI(); 
+                } else if (!user) { 
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token); 
+                    else await signInAnonymously(auth); 
+                } 
+            });
+        } else {
+            // Offline Mode Fallback
+            window.loadGlobalMissions();
+            window.initScene();
+            window.updateUI();
+        }
+
+        window.addEventListener('keydown', e => window.keys[e.code] = true);
+        window.addEventListener('keyup', e => window.keys[e.code] = false);
+        window.addEventListener('keydown', e => { if(e.code === 'KeyK' || e.code === 'k') window.tryInteract(); });
+        window.addEventListener('resize', window.onWindowResize);
+
+        // Ensure character selector renders initially
+        window.renderCharSelector();
+
+    </script>
+</body>
+</html>
