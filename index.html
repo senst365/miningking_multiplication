@@ -72,7 +72,7 @@
         /* NPC Dialog */
         .dialog-bubble {
             background: white; border: 4px solid #3b82f6; border-radius: 20px; padding: 20px;
-            text-align: left; position: relative; max-width: 680px; width: 90%; /* Increased max-width */
+            text-align: left; position: relative; max-width: 850px; width: 90%; /* Increased width */
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .dialog-bubble:after {
@@ -900,8 +900,16 @@
             const elShopMoney = document.getElementById('shop-money'); if(elShopMoney) elShopMoney.innerText = window.state.money;
             const elHealthVal = document.getElementById('health-val'); if(elHealthVal) elHealthVal.innerText = window.state.health;
             const elHealthFill = document.getElementById('health-fill'); if(elHealthFill) elHealthFill.style.width = window.state.health + '%';
-            const elLevelVal = document.getElementById('level-val'); if(elLevelVal) elLevelVal.innerText = window.state.level;
-            const elExpFill = document.getElementById('exp-fill'); if(elExpFill) elExpFill.style.width = Math.min(100, (window.state.exp / (window.state.level * 5000)) * 100) + '%';
+            
+            // Level and Exp UI
+            const elLevelText = document.getElementById('level-text');
+            if(elLevelText) {
+                const maxExp = window.state.level * 5000;
+                elLevelText.innerText = `LV.${window.state.level} (${window.state.exp}/${maxExp})`;
+            }
+            const elExpFill = document.getElementById('exp-fill'); 
+            if(elExpFill) elExpFill.style.width = Math.min(100, (window.state.exp / (window.state.level * 5000)) * 100) + '%';
+            
             if(pickaxeMesh) pickaxeMesh.material.color.setHex(config.miningTools[window.state.toolIndex].color);
             if(bodyMesh) bodyMesh.material.color.setHex(config.clothesColors[window.state.clothesIndex].color);
             const h = config.hats[window.state.hatIndex]; if(hatMesh) { if (!h.color) hatMesh.visible = false; else { hatMesh.visible = true; hatMesh.material.color.setHex(h.color); } }
@@ -1610,7 +1618,11 @@
                     }
                     window.state.inventory['fish'] += amount; gainMoney += 50 * amount; gainExp += 150 * amount;
                 }
-            } else if (u.type === 'monster') { costStamina = config.costs.monster; gainExp = 500; gainMoney = 200; } 
+            } else if (u.type === 'monster') { 
+                costStamina = config.costs.monster; 
+                gainExp = 800; // Updated per user request
+                gainMoney = 500; // Updated per user request
+            } 
             else if (u.type === 'field') { costStamina = config.costs.field; gainExp = 200; gainMoney = 50; }
 
             const finalCost = Math.max(1, costStamina + staminaReduction);
@@ -1618,47 +1630,62 @@
 
             if (bonus) { gainMoney *= 2; gainExp *= 1.5; }
             window.state.money += Math.floor(gainMoney); window.state.exp += Math.floor(gainExp);
-            if (window.state.exp >= window.state.level * 5000) { window.state.level++; window.state.exp = 0; window.showToast(`升級了！Lv. ${window.state.level}`); }
+            
+            // Level up logic with overflow handling
+            while (window.state.exp >= window.state.level * 5000) {
+                window.state.exp -= window.state.level * 5000;
+                window.state.level++;
+                window.showToast(`升級了！Lv. ${window.state.level}`);
+            }
             
             // --- DYNAMIC RESPAWN LOGIC ---
-            // Instead of just setting active=false, we hide it and spawn a replacement elsewhere
-            // This ensures resources never run out
             const typeToRespawn = u.type;
             const currentMap = window.state.currentMap;
             
             scene.remove(window.state.currentObject); 
             window.state.currentObject.userData.active = false;
             
-            // Spawn replacement immediately
             if (['monster', 'ore', 'field', 'fish', 'special_fish'].includes(typeToRespawn)) {
-                // If special fish was caught, respawn a normal fish mostly, small chance for another special
-                // Or just allow raw respawnObject to handle logic if we pass correct type
-                // But respawnObject takes type as input.
-                // Let's keep it simple: respawn same type elsewhere to maintain density
-                // But for special fish, maybe we don't want to guarantee immediate respawn of another special?
-                // Let's randomize slightly:
                 if (typeToRespawn === 'special_fish') {
                      respawnObject(Math.random() > 0.5 ? 'special_fish' : 'fish', currentMap);
                 } else {
                      respawnObject(typeToRespawn, currentMap);
                 }
             }
-            // -----------------------------
             
             window.updateUI(); window.saveProgress();
             
-            // 重要修改：無論是什麼類型，先關閉問題視窗
+            // 無論類型，先關閉問題視窗
             window.closeQuestion();
 
-            // 如果有獎勵物品 (魚、寶箱、打怪)，則彈出獎勵視窗
-            if (rewardItems.length > 0) {
-                 const list = document.getElementById('reward-list'); 
-                 list.innerHTML = '';
-                 rewardItems.forEach(r => { 
-                     list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; 
-                 });
-                 // 確保顯示
-                 document.getElementById('reward-modal').classList.remove('hidden');
+            // 捕魚 Toast 提示
+            if (rewardItems.length > 0 && (u.type === 'fish' || u.type === 'special_fish')) {
+                let msg = "";
+                rewardItems.forEach(r => { msg += `${r.name} x${r.amount} `; });
+                if(!msg) msg = `漁獲 x${window.state.inventory['fish'] - (window.state.inventory['fish']-1)}`; 
+                window.showToast(`捕獲成功！獲得: ${msg} 金幣+$${gainMoney}`);
+            }
+
+            // 打怪獸 獎勵視窗
+            if (u.type === 'monster') {
+                rewardItems.push({icon: '✨', name: '巨量經驗', amount: Math.floor(gainExp)}); 
+                rewardItems.push({icon: '💰', name: '賞金', amount: Math.floor(gainMoney)});
+                
+                // Extra rewards
+                window.state.inventory['chest']++; 
+                rewardItems.push({icon: '🎁', name: '戰利品寶箱', amount: 1});
+                
+                if (Math.random() > 0.5) {
+                     window.state.inventory['diamond']++; 
+                     rewardItems.push({icon: '💎', name: '傳說鑽石', amount: 1});
+                } else {
+                     window.state.inventory['ruby']++; 
+                     rewardItems.push({icon: '🛑', name: '紅寶石', amount: 1});
+                }
+
+                const list = document.getElementById('reward-list'); list.innerHTML = '';
+                rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
+                document.getElementById('reward-modal').classList.remove('hidden');
             }
         };
 
