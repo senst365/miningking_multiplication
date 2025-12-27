@@ -72,7 +72,7 @@
         /* NPC Dialog */
         .dialog-bubble {
             background: white; border: 4px solid #3b82f6; border-radius: 20px; padding: 20px;
-            text-align: left; position: relative; max-width: 500px; width: 90%;
+            text-align: left; position: relative; max-width: 680px; width: 90%; /* Increased max-width */
             box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .dialog-bubble:after {
@@ -338,7 +338,7 @@
                 <p class="text-gray-300 mb-8 font-bold text-center" id="reset-desc">所有等級、金錢、道具將會歸零！<br>體力將回滿，題庫設定會保留。</p>
                 <div class="flex gap-4">
                     <button onclick="window.closeResetConfirm()" id="btn-cancel-reset" class="flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white">取消</button>
-                    <button onclick="window.resetGame()" class="flex-1 py-3 bg-red-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none">確認重置</button>
+                    <button onclick="window.resetGame()" id="btn-confirm-reset" class="flex-1 py-3 bg-red-600 rounded-xl font-black text-white interactive shadow-[0_4px_0_#991b1b] active:translate-y-1 active:shadow-none">確認重置</button>
                 </div>
             </div>
         </div>
@@ -1091,10 +1091,18 @@
 
         function createNature() {
             const riverGeo = new THREE.PlaneGeometry(800, 40000); 
-            const riverMat = new THREE.MeshStandardMaterial({ color: 0x0077be, transparent: true, opacity: 0.9 });
+            // Modified material for stability
+            const riverMat = new THREE.MeshStandardMaterial({ 
+                color: 0x0077be, 
+                transparent: true, 
+                opacity: 0.85, 
+                depthWrite: false, // Prevents Z-fighting
+                polygonOffset: true,
+                polygonOffsetFactor: -1 
+            });
             const river = new THREE.Mesh(riverGeo, riverMat); 
             river.rotation.x = -Math.PI / 2; 
-            river.position.set(-1200, 0.2, 0); 
+            river.position.set(-1200, 2.0, 0); // Raised Y for stability
             scene.add(river);
 
             for(let z = -15000; z <= 15000; z+= 2500) {
@@ -1136,13 +1144,23 @@
             
             while(attempts < maxAttempts) {
                 attempts++;
-                const x = (Math.random() - 0.5) * range; 
-                const z = (Math.random() - 0.5) * range;
+                
+                let x, z;
+                
+                if (type === 'fish' || type === 'special_fish') {
+                    // Force river coordinates for fish respawn
+                    z = (Math.random() - 0.5) * 38000;
+                    x = -1200 + (Math.random() - 0.5) * 700;
+                } else {
+                    x = (Math.random() - 0.5) * range; 
+                    z = (Math.random() - 0.5) * range;
+                }
                 
                 // Cave specific check
                 if (mapType === 'cave' && Math.abs(x) < 200 && Math.abs(z) < 200) continue;
-                // Island river check
-                if (mapType === 'island' && x > config.riverRange.min && x < config.riverRange.max) continue;
+                
+                // Island river check (avoid spawning non-fish inside river)
+                if (mapType === 'island' && type !== 'fish' && type !== 'special_fish' && x > config.riverRange.min && x < config.riverRange.max) continue;
                 
                 const pos = new THREE.Vector3(x, 0, z);
                 
@@ -1173,6 +1191,16 @@
                      mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); 
                      mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; 
                      mesh.position.y = 4.5;
+                } else if (type === 'fish' || type === 'special_fish') {
+                    const fishModel = new THREE.Group();
+                    const color = type === 'special_fish' ? 0xffd700 : 0x0ea5e9;
+                    const fbody = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 2), new THREE.MeshStandardMaterial({ color: color, metalness: 0.8 })); 
+                    fishModel.add(fbody);
+                    const ftail = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 3), new THREE.MeshStandardMaterial({ color: type === 'special_fish' ? 0xffa500 : 0x0284c7 })); 
+                    ftail.position.x = -4; ftail.rotation.z = Math.PI / 2; fishModel.add(ftail);
+                    mesh = fishModel; 
+                    mesh.userData = { type: type, radius: 5.0, active: true }; 
+                    mesh.position.y = 1.5;
                 }
 
                 if (mesh) {
@@ -1229,34 +1257,36 @@
                 respawnObject('field', 'island');
             }
             
-            // Phase 3: General Scatter (Ores, Fish, more Monsters)
+            // Phase 3: Dedicated Fish Spawning Loop (Wide Distribution)
+            for(let i=0; i<800; i++) {
+                // Randomly choose normal fish or special fish
+                const isSpecial = Math.random() > 0.92; // 8% chance for special fish
+                respawnObject(isSpecial ? 'special_fish' : 'fish', 'island');
+            }
+
+            // Phase 4: General Scatter (Ores, more Monsters) - Fish removed from here to dedicated loop
             for (let i = 0; i < 3000; i++) {
                 const x = (Math.random() - 0.5) * 25000; 
                 const z = (Math.random() - 0.5) * 25000;
                 
                 if (Math.abs(x) < 100 && Math.abs(z) < 100) continue;
                 
-                const isR = x > config.riverRange.min && x < config.riverRange.max; let mesh;
-                if (isR) {
-                    if (!bridges.some(b => Math.abs(z - b.z) < 300) && Math.random() > 0.6) {
-                        const fishModel = new THREE.Group();
-                        const fbody = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 2), new THREE.MeshStandardMaterial({ color: 0x0ea5e9, metalness: 0.8 })); fishModel.add(fbody);
-                        const ftail = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 3), new THREE.MeshStandardMaterial({ color: 0x0284c7 })); ftail.position.x = -4; ftail.rotation.z = Math.PI / 2; fishModel.add(ftail);
-                        mesh = fishModel; mesh.userData = { type: 'fish', radius: 5.0, active: true }; mesh.position.y = 1.5;
-                    }
-                } else {
-                    const r = Math.random();
-                    if (r > 0.98) { // Small extra chance for monster
-                         mesh = createCharacterModel(0x000000, true, config.monsterScale).group; 
-                         mesh.userData = { type: 'monster', radius: 12.0, active: true }; 
-                    }
-                    else { 
-                        const keys = Object.keys(config.oreTypes).filter(k => k !== 'chest' && k !== 'fish' && k !== 'pearl' && k !== 'crab' && k !== 'lobster' && k !== 'shark');
-                        const o = keys[Math.floor(Math.random() * keys.length)]; 
-                        mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); 
-                        mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; mesh.position.y = 4.5; 
-                    }
+                // Skip River area for this loop (handled above)
+                if (x > config.riverRange.min && x < config.riverRange.max) continue;
+                
+                let mesh;
+                const r = Math.random();
+                if (r > 0.98) { // Small extra chance for monster
+                     mesh = createCharacterModel(0x000000, true, config.monsterScale).group; 
+                     mesh.userData = { type: 'monster', radius: 12.0, active: true }; 
                 }
+                else { 
+                    const keys = Object.keys(config.oreTypes).filter(k => k !== 'chest' && k !== 'fish' && k !== 'pearl' && k !== 'crab' && k !== 'lobster' && k !== 'shark');
+                    const o = keys[Math.floor(Math.random() * keys.length)]; 
+                    mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(5.0), new THREE.MeshStandardMaterial({ color: config.oreTypes[o].color, metalness: 0.7 })); 
+                    mesh.userData = { type: 'ore', ore: o, radius: 4.0, active: true }; mesh.position.y = 4.5; 
+                }
+                
                 if(mesh) { mesh.position.x = x; mesh.position.z = z; mesh.castShadow = true; scene.add(mesh); objects.push(mesh); collidables.push(mesh); }
             }
         }
@@ -1391,6 +1421,7 @@
                     if(u.type === 'monster') hint.innerText = "[K] 挑戰怪獸 (體力: 30)"; 
                     else if(u.type === 'field') hint.innerText = "[K] 搜索田地 (體力: 5)";
                     else if(u.type === 'fish') hint.innerText = "[K] 捕魚挑戰 (體力: 10)";
+                    else if(u.type === 'special_fish') hint.innerText = "[K] 捕獲黃金魚 (需漁網, 體力: 10)";
                     else if(u.type === 'npc') hint.innerText = "[K] 與冒險者對話";
                     else hint.innerText = "[K] 採礦挑戰 (體力: 10)";
                 } else { hint.classList.add('hidden'); window.state.currentObject = null; }
@@ -1433,7 +1464,7 @@
             
             if (type === 'monster') { titleEl.innerText = "戰鬥中"; titleEl.className = "text-red-600 font-black text-2xl tracking-widest italic uppercase"; }
             else if (type === 'field') { titleEl.innerText = "搜索田地中"; titleEl.className = "text-green-600 font-black text-2xl tracking-widest italic uppercase"; }
-            else if (type === 'fish') { titleEl.innerText = "捕魚中"; titleEl.className = "text-sky-600 font-black text-2xl tracking-widest italic uppercase"; }
+            else if (type === 'fish' || type === 'special_fish') { titleEl.innerText = "捕魚中"; titleEl.className = "text-sky-600 font-black text-2xl tracking-widest italic uppercase"; }
             else { titleEl.innerText = "挖礦中"; titleEl.className = "text-blue-600 font-black text-2xl tracking-widest italic uppercase"; }
             
             const actualDiff = q.difficulty || 'normal';
@@ -1556,17 +1587,29 @@
             const staminaReduction = (hat.effect ? hat.effect.stamina : 0);
 
             if (u.type === 'ore') { costStamina = config.costs.mining; const data = config.oreTypes[u.ore]; window.state.inventory[u.ore]++; gainMoney = Math.floor(data.value * 0.2); gainExp = data.exp; } 
-            else if (u.type === 'fish') {
+            else if (u.type === 'fish' || u.type === 'special_fish') {
                 costStamina = config.costs.fishing; let amount = 1;
-                if (window.state.activeTool === 'fishing_net') {
-                    const r = Math.random();
-                    if (r > 0.95) { window.state.inventory['shark']++; rewardItems.push({icon: '🦈', name: '傳說鯊魚', amount: 1}); } 
-                    else if (r > 0.90) { window.state.inventory['pearl']++; rewardItems.push({icon: '🔮', name: '深海珍珠', amount: 1}); } 
-                    else if (r > 0.70) { window.state.inventory['lobster']++; rewardItems.push({icon: '🦞', name: '大龍蝦', amount: 1}); } 
-                    else if (r > 0.40) { window.state.inventory['crab']++; rewardItems.push({icon: '🦀', name: '帝王蟹', amount: 1}); } 
-                    else { amount = 3; }
+                
+                // Special Fish Logic
+                if (u.type === 'special_fish') {
+                    amount = 5; 
+                    window.state.inventory['diamond'] += 1;
+                    rewardItems.push({icon: '💎', name: '傳說獎勵', amount: 1});
+                    window.state.inventory['shark'] += 1;
+                    rewardItems.push({icon: '🦈', name: '黃金鯊', amount: 1});
+                    gainMoney += 5000;
+                    gainExp += 2000;
+                } else {
+                    if (window.state.activeTool === 'fishing_net') {
+                        const r = Math.random();
+                        if (r > 0.95) { window.state.inventory['shark']++; rewardItems.push({icon: '🦈', name: '傳說鯊魚', amount: 1}); } 
+                        else if (r > 0.90) { window.state.inventory['pearl']++; rewardItems.push({icon: '🔮', name: '深海珍珠', amount: 1}); } 
+                        else if (r > 0.70) { window.state.inventory['lobster']++; rewardItems.push({icon: '🦞', name: '大龍蝦', amount: 1}); } 
+                        else if (r > 0.40) { window.state.inventory['crab']++; rewardItems.push({icon: '🦀', name: '帝王蟹', amount: 1}); } 
+                        else { amount = 3; }
+                    }
+                    window.state.inventory['fish'] += amount; gainMoney += 50 * amount; gainExp += 150 * amount;
                 }
-                window.state.inventory['fish'] += amount; gainMoney += 50 * amount; gainExp += 150 * amount;
             } else if (u.type === 'monster') { costStamina = config.costs.monster; gainExp = 500; gainMoney = 200; } 
             else if (u.type === 'field') { costStamina = config.costs.field; gainExp = 200; gainMoney = 50; }
 
@@ -1587,31 +1630,35 @@
             window.state.currentObject.userData.active = false;
             
             // Spawn replacement immediately
-            if (['monster', 'ore', 'field'].includes(typeToRespawn)) {
-                respawnObject(typeToRespawn, currentMap);
+            if (['monster', 'ore', 'field', 'fish', 'special_fish'].includes(typeToRespawn)) {
+                // If special fish was caught, respawn a normal fish mostly, small chance for another special
+                // Or just allow raw respawnObject to handle logic if we pass correct type
+                // But respawnObject takes type as input.
+                // Let's keep it simple: respawn same type elsewhere to maintain density
+                // But for special fish, maybe we don't want to guarantee immediate respawn of another special?
+                // Let's randomize slightly:
+                if (typeToRespawn === 'special_fish') {
+                     respawnObject(Math.random() > 0.5 ? 'special_fish' : 'fish', currentMap);
+                } else {
+                     respawnObject(typeToRespawn, currentMap);
+                }
             }
             // -----------------------------
             
             window.updateUI(); window.saveProgress();
             
-            if (u.type === 'monster') {
-                window.closeQuestion(); 
-            } else if (u.type !== 'fish') {
-                window.closeQuestion();
-            }
+            // 重要修改：無論是什麼類型，先關閉問題視窗
+            window.closeQuestion();
 
-            if (rewardItems.length > 0 && u.type === 'fish') {
-                window.closeQuestion(); 
-                const list = document.getElementById('reward-list'); list.innerHTML = '';
-                rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
-                document.getElementById('reward-modal').classList.remove('hidden');
-            }
-            if (u.type === 'monster') {
-                rewardItems.push({icon: '✨', name: '經驗值', amount: Math.floor(gainExp)}); rewardItems.push({icon: '💰', name: '金幣', amount: Math.floor(gainMoney)});
-                if (Math.random() > 0.8) { window.state.inventory['chest']++; rewardItems.push({icon: '🎁', name: '稀有寶箱', amount: 1}); }
-                const list = document.getElementById('reward-list'); list.innerHTML = '';
-                rewardItems.forEach(r => { list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; });
-                document.getElementById('reward-modal').classList.remove('hidden');
+            // 如果有獎勵物品 (魚、寶箱、打怪)，則彈出獎勵視窗
+            if (rewardItems.length > 0) {
+                 const list = document.getElementById('reward-list'); 
+                 list.innerHTML = '';
+                 rewardItems.forEach(r => { 
+                     list.innerHTML += `<div class="bg-slate-50 p-4 rounded-xl border flex items-center gap-3 text-slate-800"><span class="text-3xl">${r.icon}</span><div><div class="font-bold text-slate-700">${r.name}</div><div class="font-black text-blue-500">x${r.amount}</div></div></div>`; 
+                 });
+                 // 確保顯示
+                 document.getElementById('reward-modal').classList.remove('hidden');
             }
         };
 
@@ -1625,7 +1672,7 @@
                 window.state.streak++; const type = window.state.currentObject.userData.type;
                 let msg = "答對了！";
                 if(type === 'monster') msg += "成功打敗怪物 ✨"; else if(type === 'field') msg += "成功挖掘 ✨";
-                else if(type === 'fish') msg += "成功捕獲鮮魚 🐟"; else msg += "挖礦成功 ✨";
+                else if(type === 'fish' || type === 'special_fish') msg += "成功捕獲鮮魚 🐟"; else msg += "挖礦成功 ✨";
                 fb.innerText = msg; fb.style.color = "#10b981";
                 
                 const idx = window.state.currentQuestionIdx;
@@ -1662,7 +1709,8 @@
                 window.state.health = Math.max(0, window.state.health - 15); window.updateUI();
                 if (window.state.health <= 0) { 
                     window.closeQuestion(); 
-                    window.openResetConfirm("體力耗盡！", "您已經沒有體力了。請到背包使用食物，或者重置遊戲。", false); 
+                    // 修正: 傳入 true 隱藏重置按鈕
+                    window.openResetConfirm("體力耗盡！", "您已經沒有體力了。請到背包使用食物補充體力。", true); 
                 }
             }
         };
@@ -1711,17 +1759,29 @@
                 const staminaReduction = (hat.effect ? hat.effect.stamina : 0);
                 
                 let cost = 0;
-                if(u.type === 'ore') cost = config.costs.mining; else if(u.type === 'fish') cost = config.costs.fishing; else if(u.type === 'monster') cost = config.costs.monster; else if(u.type === 'field') cost = config.costs.field;
+                if(u.type === 'ore') cost = config.costs.mining; 
+                else if(u.type === 'fish' || u.type === 'special_fish') cost = config.costs.fishing; 
+                else if(u.type === 'monster') cost = config.costs.monster; 
+                else if(u.type === 'field') cost = config.costs.field;
                 
                 const finalCost = Math.max(1, cost + staminaReduction);
 
                 if (window.state.health < finalCost) { 
-                    window.openResetConfirm("體力不足！", "您需要更多體力才能進行此操作。請使用背包中的食物，或者重置遊戲。", false); 
+                    // 修正: 傳入 true 隱藏重置按鈕
+                    window.openResetConfirm("體力不足！", "您需要更多體力才能進行此操作。請使用背包中的食物補充體力。", true); 
                     return; 
                 }
                 
-                if (u.type === 'fish') {
-                    if (window.state.activeTool !== 'fishing_rod' && window.state.activeTool !== 'fishing_net') { window.showToast("請換上魚竿或漁網 (點擊 🔄 按鈕) 才能捕魚！"); return; }
+                if (u.type === 'fish' || u.type === 'special_fish') {
+                    if (u.type === 'special_fish') {
+                        if (window.state.activeTool !== 'fishing_net') {
+                            window.showToast("這條魚太強壯了！只有「漁網」才能捕獲！");
+                            return;
+                        }
+                    } else {
+                        if (window.state.activeTool !== 'fishing_rod' && window.state.activeTool !== 'fishing_net') { window.showToast("請換上魚竿或漁網 (點擊 🔄 按鈕) 才能捕魚！"); return; }
+                    }
+                    
                     if (window.state.inventory.boat <= 0) { window.showToast("需要「渡河小船」才能接近魚群。"); return; }
                 } else if (u.type === 'ore' || u.type === 'field') {
                     if (window.state.activeTool !== 'pickaxe') { window.showToast("請換成十字鎬 (點擊 🔄 按鈕) 才能工作！"); return; }
@@ -1731,7 +1791,6 @@
         };
         
         window.closeNPCModal = () => {
-            // Stop speaking immediately
             if (window.speechSynthesis) {
                 window.speechSynthesis.cancel();
             }
@@ -1753,11 +1812,24 @@
             document.getElementById('reward-modal').classList.remove('hidden'); window.updateUI(); window.saveProgress();
         };
 
-        window.openResetConfirm = (title, desc, isGameOver = false) => {
-            const tEl = document.getElementById('reset-title'); const dEl = document.getElementById('reset-desc'); const cBtn = document.getElementById('btn-cancel-reset');
+        // 修正: 增加 hideResetBtn 參數
+        window.openResetConfirm = (title, desc, hideResetBtn = false) => {
+            const tEl = document.getElementById('reset-title'); const dEl = document.getElementById('reset-desc'); 
+            const cBtn = document.getElementById('btn-cancel-reset');
+            const rBtn = document.getElementById('btn-confirm-reset'); // 需要 HTML ID
+
             tEl.innerText = title || "確定重置？"; dEl.innerHTML = desc || "所有等級、金錢、道具將會歸零！<br>體力將回滿，題庫設定會保留。";
-            cBtn.innerText = "取消"; 
-            cBtn.onclick = window.closeResetConfirm; 
+            
+            if (hideResetBtn) {
+                if(rBtn) rBtn.classList.add('hidden');
+                cBtn.innerText = "知道了";
+                cBtn.className = "w-full py-3 bg-blue-600 rounded-xl font-bold interactive text-white shadow-[0_4px_0_#1e3a8a] active:translate-y-1 active:shadow-none";
+            } else {
+                if(rBtn) rBtn.classList.remove('hidden');
+                cBtn.innerText = "取消";
+                cBtn.className = "flex-1 py-3 bg-gray-600 rounded-xl font-bold interactive text-white";
+            }
+
             document.getElementById('modal-container').classList.remove('hidden'); document.getElementById('reset-confirm-modal').classList.remove('hidden');
         };
 
@@ -1783,8 +1855,6 @@
             window.showToast("遊戲已完全重置！");
         };
 
-        window.openSystemMenu = () => { window.toggleModal('system-menu-modal'); }
-
         window.toggleModal = (id) => { const el = document.getElementById(id); const c = document.getElementById('modal-container'); if(el) { c.classList.remove('hidden'); el.classList.toggle('hidden'); if(Array.from(document.querySelectorAll('.modal-mask')).every(m => m.classList.contains('hidden'))) c.classList.add('hidden'); } if(id==='shop-modal') window.changeShopTab('recycle'); if(id==='settings-modal') window.renderTeacherMissionList(); if(id==='backpack-modal') window.updateUI(); };
         window.toggleTabletMode = () => { window.state.isTablet = !window.state.isTablet; document.body.classList.toggle('tablet-mode', window.state.isTablet); window.showToast(window.state.isTablet ? "開啟搖桿介面" : "關閉搖桿介面"); };
         window.onWindowResize = () => { if (!camera || !renderer) return; camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
@@ -1805,7 +1875,7 @@
         window.closeBattleConfirm = () => { document.getElementById('battle-confirm-modal').classList.add('hidden'); document.getElementById('modal-container').classList.add('hidden'); window.state.isAnswering = false; }
         window.startBattle = () => { window.closeBattleConfirm(); window.state.isMining = true; window.state.miningTime = 0; }
         window.unequipHat = () => { window.state.hatIndex = 0; window.updateUI(); window.saveProgress(); window.showToast("已卸下裝備"); }
-        window.equipHat = (idx) => { window.state.hatIndex = idx; window.updateUI(); window.saveProgress(); window.showToast(`已裝備：${config.hats[idx].name}`); }
+        window.equipHat = (idx) => { window.state.hatIndex = idx; window.updateUI(); window.saveProgress(); window.showToast(`裝備中`); }
         window.useSupply = (key) => { if (window.state.inventory[key] > 0) { if (window.state.health >= 100) { window.showToast("體力已滿！"); return; } const it = config.supplies[key]; window.state.inventory[key]--; window.state.health = Math.min(100, window.state.health + it.heal); window.updateUI(); window.saveProgress(); window.showToast(`使用了 ${it.name}`); } }
         window.downloadExampleCSV = function() { 
             const header = "\ufeff類型,題目,選項1,選項2,選項3,選項4,正確答案(1-4),難度(normal/hard)\n"; 
@@ -1822,36 +1892,9 @@
         window.sellOne = (k) => { if (window.state.inventory[k] > 0) { window.state.inventory[k]--; window.state.money += config.oreTypes[k].value; window.updateUI(); window.changeShopTab('recycle'); window.saveProgress(); } };
         window.setKey = (code, active, btn) => { window.keys[code] = active; if (active) btn.classList.add('active-state'); else btn.classList.remove('active-state'); };
 
-        if(auth) {
-            onAuthStateChanged(auth, async (user) => { 
-                if (user && window.state) { 
-                    window.state.userId = user.uid; 
-                    await window.loadGlobalMissions(); 
-                    window.initScene(); 
-                    window.updateUI(); 
-                } else if (!user) { 
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-                        else throw new Error("No token");
-                    } catch (e) {
-                        console.log("Custom token failed (expected if using custom firebase config), trying anonymous:", e);
-                        await signInAnonymously(auth); 
-                    }
-                } 
-            });
-        } else {
-            window.loadGlobalMissions();
-            window.initScene();
-            window.updateUI();
-        }
-
-        window.addEventListener('keydown', e => window.keys[e.code] = true);
-        window.addEventListener('keyup', e => window.keys[e.code] = false);
-        window.addEventListener('keydown', e => { if(e.code === 'KeyK' || e.code === 'k') window.tryInteract(); });
-        window.addEventListener('resize', window.onWindowResize);
-
+        if(auth) { onAuthStateChanged(auth, async (user) => { if (user && window.state) { window.state.userId = user.uid; await loadGlobalMissions(); initScene(); window.updateUI(); } else if (!user) { try { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token); else throw new Error("No token"); } catch (e) { console.log("Custom token failed (expected if using custom firebase config), trying anonymous:", e); await signInAnonymously(auth); } } }); } else { loadGlobalMissions(); initScene(); window.updateUI(); }
+        window.addEventListener('keydown', e => window.keys[e.code] = true); window.addEventListener('keyup', e => window.keys[e.code] = false); window.addEventListener('keydown', e => { if(e.code === 'KeyK' || e.code === 'k') window.tryInteract(); }); window.addEventListener('resize', window.onWindowResize);
         window.renderCharSelector();
-
     </script>
 </body>
 </html>
